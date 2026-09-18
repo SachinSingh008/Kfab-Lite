@@ -1,0 +1,2 @@
+-- Seed data for KFAB-BASIC
+-- Populate initial development data here once database tables are defined.
