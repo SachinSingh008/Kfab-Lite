@@ -26,7 +26,9 @@ class ProfileScreen extends StatelessWidget {
         final pendingQueueCount = store.offlineQueue.length;
 
         return Scaffold(
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
+            backgroundColor: Colors.white.withValues(alpha: 0.9),
             title: const Text('Operator Profile & Access'),
           ),
           body: SingleChildScrollView(
@@ -46,7 +48,7 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: AppTheme.getPrimaryForRole(authState.role),
                         child: Text(
                           authState.role.shortCode,
                           style: const TextStyle(
@@ -75,20 +77,28 @@ class ProfileScreen extends StatelessWidget {
                               style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                             ),
                             const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                authState.companyName,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryBlue,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.getBadgeBgForRole(authState.role),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppTheme.getPrimaryForRole(authState.role).withValues(alpha: 0.3),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    authState.role.displayName,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.getBadgeTextForRole(authState.role),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),

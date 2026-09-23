@@ -1,3 +1,7 @@
+// ============================================================================
+// KFAB BASIC — Data Type Definitions (Zero Mock Data / Clean Slate)
+// ============================================================================
+
 export interface WorkerRecord {
   id: string;
   name: string;
@@ -35,28 +39,362 @@ export interface SupplyTransaction {
   status: string;
 }
 
-export const INITIAL_WORKERS: WorkerRecord[] = [
-  { id: "KF-0101", name: "Ramesh Sharma", designation: "Welder Grade 1", dept: "Fabrication", shift: "General (08:00)", status: "PRESENT", time: "08:04 AM", supervisor: "Ajay Verma" },
-  { id: "KF-0102", name: "Sunil Kumar", designation: "Fitter Senior", dept: "Assembly Bay", shift: "General (08:00)", status: "PRESENT", time: "08:12 AM", supervisor: "Ajay Verma" },
-  { id: "KF-0103", name: "Mahesh Yadav", designation: "CNC Operator", dept: "Machine Shop", shift: "General (08:00)", status: "PRESENT", time: "07:55 AM", supervisor: "Prakash Patel" },
-  { id: "KF-0104", name: "Vikram Singh", designation: "Welder Grade 2", dept: "Fabrication", shift: "General (08:00)", status: "ABSENT", time: "-", supervisor: "Ajay Verma" },
-  { id: "KF-0105", name: "Deepak Rawat", designation: "Grinder & Helper", dept: "Finishing Bay", shift: "General (08:00)", status: "PRESENT", time: "08:00 AM", supervisor: "Prakash Patel" },
-  { id: "KF-0106", name: "Amit Tiwari", designation: "Rigger", dept: "Yard & Logistics", shift: "General (08:00)", status: "PRESENT", time: "08:18 AM", supervisor: "Ajay Verma" },
-  { id: "KF-0107", name: "Santosh Naik", designation: "Gas Cutter", dept: "Fabrication", shift: "General (08:00)", status: "PRESENT", time: "08:05 AM", supervisor: "Ajay Verma" },
+// Clean Slate: Zero hardcoded fake items
+export const INITIAL_WORKERS: WorkerRecord[] = [];
+export const INITIAL_STOCK: StockMaterial[] = [];
+export const INITIAL_TRANSACTIONS: SupplyTransaction[] = [];
+
+// ============================================================================
+// KFAB360 Operations Data Models (Supervisor Domain)
+// ============================================================================
+
+export interface DailyReportRecord {
+  code: string;
+  project: string;
+  date: string;
+  shift: string;
+  planned: string;
+  completed: string;
+  percent: number;
+  workers: number;
+  welders?: number;
+  fitters?: number;
+  riggers?: number;
+  machines: number;
+  machineName?: string;
+  machineHours?: number;
+  qa: "Passed" | "Observation" | "Failed";
+  qaNotes?: string;
+  issueTitle?: string;
+  issueSeverity?: "Low" | "Medium" | "High";
+  reqItem?: string;
+  reqUrgency?: "Low" | "Medium" | "High";
+  supervisorNotes?: string;
+  status: "Submitted" | "Approved" | "Under Review";
+}
+
+export interface ProductionLogRecord {
+  code: string;
+  project: string;
+  bay: string;
+  plannedMT: number;
+  completedMT: number;
+  scrapMT: number;
+  efficiency: string;
+  shift: string;
+  supervisor: string;
+}
+
+export interface MachineRecord {
+  code: string;
+  name: string;
+  make: string;
+  runningHrsToday: number;
+  capacity: string;
+  operator: string;
+  status: "Operational" | "Maintenance" | "Standby";
+  nextService: string;
+}
+
+export interface QaqcRecord {
+  code: string;
+  project: string;
+  component: string;
+  testType: string;
+  standard: string;
+  inspector: string;
+  result: "Passed" | "Observation" | "Failed";
+  date: string;
+}
+
+export interface IssueRecord {
+  code: string;
+  project: string;
+  severity: "Low" | "Medium" | "High";
+  title: string;
+  reportedBy: string;
+  assignedTo: string;
+  targetDate: string;
+  status: "Open" | "Under Repair" | "Resolved";
+}
+
+export interface RequirementRecord {
+  code: string;
+  project: string;
+  item: string;
+  quantity: string;
+  urgency: "Low" | "Medium" | "High";
+  requestedBy: string;
+  requiredBy: string;
+  status: "Pending Approval" | "Approved" | "PO Placed" | "Issued";
+}
+
+export const INITIAL_DAILY_REPORTS: DailyReportRecord[] = [
+  {
+    code: "DR-2026-0912",
+    project: "KFAB-PRJ-001 (Chakan Plant)",
+    date: "2026-09-05",
+    shift: "Day Shift",
+    planned: "Column erection & splice fitup G1-G8",
+    completed: "G1-G6 columns fully erected & torque checked",
+    percent: 75,
+    workers: 24,
+    welders: 8,
+    fitters: 10,
+    riggers: 6,
+    machines: 3,
+    machineName: "Hydra Mobile Crane 25T (ACE)",
+    machineHours: 7.5,
+    qa: "Passed",
+    qaNotes: "Ultrasonic weld testing passed with zero linear defects.",
+    status: "Submitted",
+  },
+  {
+    code: "DR-2026-0911",
+    project: "KFAB-PRJ-002 (Aurangabad Conveyor)",
+    date: "2026-09-05",
+    shift: "Day Shift",
+    planned: "Gantry girder submerged arc welding splice joint",
+    completed: "60% weld passes completed on girder GG-04",
+    percent: 60,
+    workers: 18,
+    welders: 6,
+    fitters: 8,
+    riggers: 4,
+    machines: 2,
+    machineName: "Submerged Arc Welder (SAW 1000A)",
+    machineHours: 6.0,
+    qa: "Observation",
+    qaNotes: "Minor surface porosity observed at root pass weld.",
+    status: "Submitted",
+  },
+  {
+    code: "DR-2026-0910",
+    project: "KFAB-PRJ-003 (Storage Tank Unit 4)",
+    date: "2026-09-04",
+    shift: "Night Shift",
+    planned: "Shell plate 28mm rolling and root tacking",
+    completed: "Full shell cylinder roundness verified & tacked",
+    percent: 100,
+    workers: 12,
+    welders: 4,
+    fitters: 6,
+    riggers: 2,
+    machines: 4,
+    machineName: "4-Roll Hydraulic Plate Bender (DAVI)",
+    machineHours: 8.0,
+    qa: "Passed",
+    qaNotes: "Radius template check within +/- 1.5mm tolerance.",
+    status: "Approved",
+  },
 ];
 
-export const INITIAL_STOCK: StockMaterial[] = [
-  { code: "STL-PL-12", name: "MS Plate 12mm IS 2062", category: "Raw Steel", spec: "E250 Gr A, 2500x12000", unit: "TON", inward: "42.50", outward: "14.20", usage: "24.80", current: "3.50", min: "5.00", isLow: true },
-  { code: "STL-PL-20", name: "MS Plate 20mm IS 2062", category: "Raw Steel", spec: "E250 Gr BR, 2500x6000", unit: "TON", inward: "68.00", outward: "0.00", usage: "38.50", current: "29.50", min: "10.00", isLow: false },
-  { code: "STL-BEAM-250", name: "ISMB 250 Heavy Beam", category: "Structural", spec: "Standard 12m length", unit: "TON", inward: "35.00", outward: "8.50", usage: "16.00", current: "10.50", min: "8.00", isLow: false },
-  { code: "GAS-ARG-D", name: "Argon Shielding Gas Cyl", category: "Gases", spec: "High Purity 7m3 D-Type", unit: "NOS", inward: "40", outward: "0", usage: "36", current: "4", min: "8", isLow: true },
-  { code: "WLD-E7018", name: "Low Hydrogen Electrode 7018", category: "Consumables", spec: "4.00mm x 450mm", unit: "BOX", inward: "120", outward: "0", usage: "64", current: "56", min: "25", isLow: false },
-  { code: "BLT-M20-75", name: "HT Structural Bolts M20x75", category: "Hardware", spec: "Grade 8.8 with Nut & Washer", unit: "NOS", inward: "1200", outward: "200", usage: "450", current: "550", min: "200", isLow: false },
+export const INITIAL_PRODUCTION_LOGS: ProductionLogRecord[] = [
+  {
+    code: "PRD-2026-0905",
+    project: "KFAB-PRJ-001",
+    bay: "Bay 1 — CNC Cutting & Fit-Up",
+    plannedMT: 12.5,
+    completedMT: 11.2,
+    scrapMT: 0.35,
+    efficiency: "89.6%",
+    shift: "Day Shift",
+    supervisor: "Imran Shaikh (Bay Supervisor)",
+  },
+  {
+    code: "PRD-2026-0904",
+    project: "KFAB-PRJ-002",
+    bay: "Bay 2 — Submerged Arc Welding (SAW)",
+    plannedMT: 8.0,
+    completedMT: 8.4,
+    scrapMT: 0.18,
+    efficiency: "105.0%",
+    shift: "Day Shift",
+    supervisor: "Priya Deshmukh (QA/QC Lead)",
+  },
+  {
+    code: "PRD-2026-0903",
+    project: "KFAB-PRJ-003",
+    bay: "Bay 3 — Shot Blasting & Epoxy Primer",
+    plannedMT: 15.0,
+    completedMT: 14.1,
+    scrapMT: 0.05,
+    efficiency: "94.0%",
+    shift: "Night Shift",
+    supervisor: "Vikram Patil (Shop Supv.)",
+  },
+  {
+    code: "PRD-2026-0902",
+    project: "KFAB-PRJ-004",
+    bay: "Bay 1 — Heavy Box Girder Assembly",
+    plannedMT: 10.0,
+    completedMT: 7.8,
+    scrapMT: 0.42,
+    efficiency: "78.0%",
+    shift: "Day Shift",
+    supervisor: "Imran Shaikh (Bay Supervisor)",
+  },
 ];
 
-export const INITIAL_TRANSACTIONS: SupplyTransaction[] = [
-  { id: "INW-2026-084", type: "INWARD", date: "18 Sep 2026", ref: "INV-9921 / CH-402", entity: "Tata Steel BSL Ltd", material: "MS Plate 20mm IS 2062", qty: "24.50 TON", vehicle: "MH-12-RN-8812", status: "RECEIVED" },
-  { id: "INW-2026-083", type: "INWARD", date: "18 Sep 2026", ref: "CH-1102", entity: "Air Liquide India", material: "Argon Shielding Gas", qty: "15 NOS", vehicle: "MH-14-AZ-4501", status: "RECEIVED" },
-  { id: "OUT-2026-041", type: "OUTWARD", date: "17 Sep 2026", ref: "GP-2026-104", entity: "Site B - Bridge Project", material: "ISMB 250 Heavy Beam", qty: "8.50 TON", vehicle: "MH-04-E-9021", status: "DISPATCHED" },
-  { id: "USG-2026-112", type: "USAGE", date: "18 Sep 2026", ref: "WO-GIRDER-4", entity: "Bay 2 (Fabrication)", material: "MS Plate 12mm IS 2062", qty: "4.20 TON", vehicle: "-", status: "CONSUMED" },
+export const INITIAL_MACHINES: MachineRecord[] = [
+  {
+    code: "MCH-01",
+    name: "Hydra Mobile Crane 25T",
+    make: "Action Construction (ACE)",
+    runningHrsToday: 7.5,
+    capacity: "25 MT",
+    operator: "Dnyaneshwar More",
+    status: "Operational",
+    nextService: "2026-09-25",
+  },
+  {
+    code: "MCH-02",
+    name: "CNC Plasma Gantry Cutting Table (3x12m)",
+    make: "Messer Cutting Systems",
+    runningHrsToday: 9.0,
+    capacity: "50mm Mild Steel Plate",
+    operator: "Sanjay Mane",
+    status: "Operational",
+    nextService: "2026-10-05",
+  },
+  {
+    code: "MCH-03",
+    name: "Submerged Arc Welder (SAW Column & Boom)",
+    make: "Lincoln Electric 1000A",
+    runningHrsToday: 6.0,
+    capacity: "1000 Amps Multi-Pass",
+    operator: "Baban Ghorpade",
+    status: "Operational",
+    nextService: "2026-09-18",
+  },
+  {
+    code: "MCH-04",
+    name: "4-Roll Hydraulic Plate Bender",
+    make: "DAVI Promau 32mm",
+    runningHrsToday: 4.5,
+    capacity: "32mm x 3000mm Pre-Bend",
+    operator: "Santosh Yadav",
+    status: "Maintenance",
+    nextService: "2026-09-07",
+  },
+  {
+    code: "MCH-05",
+    name: "EOT Double Girder Overhead Crane (Bay 1)",
+    make: "Mukand Industrial Cranes",
+    runningHrsToday: 11.0,
+    capacity: "15 MT Hook Load",
+    operator: "Workshop Rigger Pool",
+    status: "Operational",
+    nextService: "2026-11-12",
+  },
 ];
+
+export const INITIAL_QAQC: QaqcRecord[] = [
+  {
+    code: "QA-2026-041",
+    project: "KFAB-PRJ-001",
+    component: "Column Base Pl. Full Pen Weld C1-C6",
+    testType: "Ultrasonic Testing (UT)",
+    standard: "AWS D1.1 Structural Welding",
+    inspector: "Priya Deshmukh",
+    result: "Passed",
+    date: "2026-09-05",
+  },
+  {
+    code: "QA-2026-040",
+    project: "KFAB-PRJ-002",
+    component: "Gantry Girder Splice Web Flange Weld",
+    testType: "Radiographic Testing (RT)",
+    standard: "ASME Section IX",
+    inspector: "Third Party (TUV India)",
+    result: "Observation",
+    date: "2026-09-04",
+  },
+  {
+    code: "QA-2026-039",
+    project: "KFAB-PRJ-003",
+    component: "Shell Plate Curvature Template Check",
+    testType: "Dimensional & Radius Gauge",
+    standard: "API 650 Storage Tanks",
+    inspector: "Priya Deshmukh",
+    result: "Passed",
+    date: "2026-09-03",
+  },
+  {
+    code: "QA-2026-038",
+    project: "KFAB-PRJ-004",
+    component: "Handrail Post Fillet Welds",
+    testType: "Visual & Dye Penetrant (DPT)",
+    standard: "IS 800:2007",
+    inspector: "Imran Shaikh",
+    result: "Passed",
+    date: "2026-09-02",
+  },
+];
+
+export const INITIAL_ISSUES: IssueRecord[] = [
+  {
+    code: "ISS-012",
+    project: "KFAB-PRJ-002",
+    severity: "High",
+    title: "Splice weld porosity on girder GG-04 root pass",
+    reportedBy: "Priya Deshmukh",
+    assignedTo: "Baban Ghorpade (Welder)",
+    targetDate: "2026-09-07",
+    status: "Under Repair",
+  },
+  {
+    code: "ISS-011",
+    project: "KFAB-PRJ-004",
+    severity: "Medium",
+    title: "Plate bending machine roll alignment drift +2mm",
+    reportedBy: "Santosh Yadav",
+    assignedTo: "Plant Maintenance Team",
+    targetDate: "2026-09-08",
+    status: "Open",
+  },
+  {
+    code: "ISS-010",
+    project: "KFAB-PRJ-001",
+    severity: "Low",
+    title: "Primer DFT dry film thickness uneven at bracket joint",
+    reportedBy: "Imran Shaikh",
+    assignedTo: "Raju Gaikwad (Painter)",
+    targetDate: "2026-09-06",
+    status: "Resolved",
+  },
+];
+
+export const INITIAL_REQUIREMENTS: RequirementRecord[] = [
+  {
+    code: "REQ-081",
+    project: "KFAB-PRJ-001",
+    item: "Low-Hydrogen Electrodes E7018 4.0mm",
+    quantity: "250 kg",
+    urgency: "High",
+    requestedBy: "Imran Shaikh (Bay Supervisor)",
+    requiredBy: "2026-09-08",
+    status: "Approved",
+  },
+  {
+    code: "REQ-082",
+    project: "KFAB-PRJ-003",
+    item: "SS 304 Solid Filler Wire 2.4mm",
+    quantity: "60 kg",
+    urgency: "Medium",
+    requestedBy: "Vishnu Chavan (TIG Welder)",
+    requiredBy: "2026-09-12",
+    status: "PO Placed",
+  },
+  {
+    code: "REQ-083",
+    project: "KFAB-PRJ-002",
+    item: "M24 Grade 8.8 HSFG Structural Bolts",
+    quantity: "180 nos",
+    urgency: "High",
+    requestedBy: "Priya Deshmukh (QA/QC)",
+    requiredBy: "2026-09-09",
+    status: "Pending Approval",
+  },
+];
+

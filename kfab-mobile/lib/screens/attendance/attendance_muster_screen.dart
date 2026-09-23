@@ -42,54 +42,57 @@ class _AttendanceMusterScreenState extends State<AttendanceMusterScreen> {
         final isHistorical = widget.store.isHistoricalDate;
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Daily Muster Register'),
-            actions: [
-              // Date Toggle (Active Today vs Historical Locked)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: PopupMenuButton<bool>(
-                  initialValue: isHistorical,
-                  icon: Row(
-                    children: [
-                      Icon(
-                        isHistorical ? Icons.lock : Icons.event_available,
-                        size: 16,
-                        color: isHistorical ? AppTheme.dangerCrimson : AppTheme.successEmerald,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isHistorical ? '17 Sep (Locked)' : '18 Sep (Active)',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const Icon(Icons.arrow_drop_down, size: 18),
-                    ],
-                  ),
-                  onSelected: (val) {
-                    widget.store.toggleHistoricalDateMode(val);
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: false,
-                      child: Text('18 Sep 2026 — Active Business Day'),
-                    ),
-                    const PopupMenuItem(
-                      value: true,
-                      child: Text('17 Sep 2026 — Historical (Locked at 23:59)'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: Colors.transparent,
           body: Column(
             children: [
-              // Sticky Search & Filter Bar
+              // Sticky Header & Search Bar
               Container(
                 color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 child: Column(
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Daily Muster Register',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        ),
+                        PopupMenuButton<bool>(
+                          initialValue: isHistorical,
+                          icon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isHistorical ? Icons.lock : Icons.event_available,
+                                size: 15,
+                                color: isHistorical ? AppTheme.dangerCrimson : AppTheme.successEmerald,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isHistorical ? '17 Sep (Locked)' : '18 Sep (Active)',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              const Icon(Icons.arrow_drop_down, size: 16),
+                            ],
+                          ),
+                          onSelected: (val) {
+                            widget.store.toggleHistoricalDateMode(val);
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: false,
+                              child: Text('18 Sep 2026 — Active Business Day'),
+                            ),
+                            const PopupMenuItem(
+                              value: true,
+                              child: Text('17 Sep 2026 — Historical (Locked at 23:59)'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     SearchBarField(
                       controller: _searchController,
                       hintText: 'Search welder, fitter, ID...',

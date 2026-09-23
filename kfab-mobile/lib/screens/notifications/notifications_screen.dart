@@ -32,7 +32,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }).toList();
 
         return Scaffold(
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
+            backgroundColor: Colors.white.withValues(alpha: 0.9),
             title: const Text('Notifications & Alerts'),
             actions: [
               if (widget.store.unreadCount > 0)

@@ -52,51 +52,6 @@ CREATE TRIGGER trg_enforce_company_members_immutability
   BEFORE UPDATE ON public.company_members
   FOR EACH ROW EXECUTE FUNCTION enforce_company_members_immutability();
 
--- Helper Security Definer Functions for Clean RLS
-CREATE OR REPLACE FUNCTION public.get_user_company_ids()
-RETURNS SETOF uuid AS $$
-  SELECT company_id
-  FROM public.company_members
-  WHERE user_id = auth.uid() AND status = 'ACTIVE';
-$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
-
-CREATE OR REPLACE FUNCTION public.has_company_role(
-  p_company_id uuid,
-  VARIADIC p_roles member_role_type[]
-)
-RETURNS boolean AS $$
-  SELECT (
-    public.is_super_admin()
-    OR EXISTS (
-      SELECT 1
-      FROM public.company_members
-      WHERE company_id = p_company_id
-        AND user_id = auth.uid()
-        AND status = 'ACTIVE'
-        AND role = ANY(p_roles)
-    )
-  );
-$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
-
-CREATE OR REPLACE FUNCTION public.has_company_permission(
-  p_company_id uuid,
-  p_permission text
-)
-RETURNS boolean AS $$
-  SELECT (
-    public.is_super_admin()
-    OR EXISTS (
-      SELECT 1
-      FROM public.company_members cm
-      JOIN public.role_permissions rp ON rp.role = cm.role
-      WHERE cm.company_id = p_company_id
-        AND cm.user_id = auth.uid()
-        AND cm.status = 'ACTIVE'
-        AND rp.permission = p_permission
-    )
-  );
-$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
-
 -- Role Permissions Master Table
 CREATE TABLE IF NOT EXISTS public.role_permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -143,3 +98,49 @@ INSERT INTO public.role_permissions (role, permission, description) VALUES
   ('VIEWER', 'attendance.view', 'Read-only view of attendance muster'),
   ('VIEWER', 'stock.view', 'Read-only view of stock inventory')
 ON CONFLICT (role, permission) DO NOTHING;
+
+-- Helper Security Definer Functions for Clean RLS
+CREATE OR REPLACE FUNCTION public.get_user_company_ids()
+RETURNS SETOF uuid AS $$
+  SELECT company_id
+  FROM public.company_members
+  WHERE user_id = auth.uid() AND status = 'ACTIVE';
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
+
+CREATE OR REPLACE FUNCTION public.has_company_role(
+  p_company_id uuid,
+  VARIADIC p_roles member_role_type[]
+)
+RETURNS boolean AS $$
+  SELECT (
+    public.is_super_admin()
+    OR EXISTS (
+      SELECT 1
+      FROM public.company_members
+      WHERE company_id = p_company_id
+        AND user_id = auth.uid()
+        AND status = 'ACTIVE'
+        AND role = ANY(p_roles)
+    )
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
+
+CREATE OR REPLACE FUNCTION public.has_company_permission(
+  p_company_id uuid,
+  p_permission text
+)
+RETURNS boolean AS $$
+  SELECT (
+    public.is_super_admin()
+    OR EXISTS (
+      SELECT 1
+      FROM public.company_members cm
+      JOIN public.role_permissions rp ON rp.role = cm.role
+      WHERE cm.company_id = p_company_id
+        AND cm.user_id = auth.uid()
+        AND cm.status = 'ACTIVE'
+        AND rp.permission = p_permission
+    )
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, auth, pg_temp;
+

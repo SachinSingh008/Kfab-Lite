@@ -1,51 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kfab_mobile/main.dart';
+import 'package:kfab_mobile/core/state/auth_state.dart';
+import 'package:kfab_mobile/screens/shell/main_shell_screen.dart';
 
 void main() {
-  testWidgets('Renders KFAB Mobile App and displays Supervisor dashboard with Phase 4 tools', (WidgetTester tester) async {
-    await tester.pumpWidget(const KfabMobileApp());
+  testWidgets('Renders MainShellScreen with Top AppBar and Hamburger Menu', (WidgetTester tester) async {
+    final authState = AuthState();
+    authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
+
+    await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
     await tester.pumpAndSettle();
 
-    // Verify Supervisor header is displayed
-    expect(find.text('SUPERVISOR'), findsOneWidget);
+    // Verify top hamburger icon is displayed
+    expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
 
-    // Verify Phase 4 quick action buttons
-    expect(find.text('SCAN QR CODE'), findsOneWidget);
-    expect(find.text('CHALLAN PHOTO'), findsOneWidget);
+    // Verify Top AppBar branding text
+    expect(
+      find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText().contains('kfabs')),
+      findsOneWidget,
+    );
 
-    // Verify Bottom Navigation active home item exists
-    expect(find.byIcon(Icons.dashboard), findsOneWidget);
-    expect(find.byIcon(Icons.fact_check_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.account_circle_outlined), findsOneWidget);
+    // Verify 5 Bottom Navigation items: [Inventory, Attendance, Home, Report, Chat]
+    expect(find.text('Inventory'), findsOneWidget);
+    expect(find.text('Attendance'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Report'), findsOneWidget);
+    expect(find.text('Chat'), findsOneWidget);
   });
 
-  testWidgets('Can navigate to Notifications screen and view alerts', (WidgetTester tester) async {
-    await tester.pumpWidget(const KfabMobileApp());
+  testWidgets('Tapping top-left hamburger menu opens Navigation Drawer', (WidgetTester tester) async {
+    final authState = AuthState();
+    authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
+
+    await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
     await tester.pumpAndSettle();
 
-    // Tap the Alerts tab icon
-    await tester.tap(find.byIcon(Icons.notifications_outlined));
+    // Find the hamburger icon button
+    final hamburgerFinder = find.byIcon(Icons.menu_rounded);
+    expect(hamburgerFinder, findsOneWidget);
+
+    // Tap Hamburger icon
+    await tester.tap(hamburgerFinder);
     await tester.pumpAndSettle();
 
-    // Verify Notifications screen is displayed
-    expect(find.text('Notifications & Alerts'), findsOneWidget);
-    expect(find.text('Critical Low Stock: Argon Shielding Gas'), findsOneWidget);
+    // Verify Navigation Drawer opened and shows navigation sections & profile edit
+    expect(find.text('PRIMARY MODULES & TABS'), findsOneWidget);
+    expect(find.text('Operations Dashboard'), findsWidgets);
+    expect(find.text('Edit Profile & Change Name'), findsOneWidget);
   });
 
-  testWidgets('Can navigate to Attendance screen and view muster register', (WidgetTester tester) async {
-    await tester.pumpWidget(const KfabMobileApp());
+  testWidgets('Can navigate to Attendance muster via bottom bar', (WidgetTester tester) async {
+    final authState = AuthState();
+    authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
+
+    await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
     await tester.pumpAndSettle();
 
-    // Tap the Attendance tab icon
+    // Tap Attendance bottom nav item
     await tester.tap(find.byIcon(Icons.fact_check_outlined));
     await tester.pumpAndSettle();
 
-    // Verify Attendance Muster Register screen is displayed
+    // Verify Attendance muster view is displayed
     expect(find.text('Daily Muster Register'), findsOneWidget);
-    expect(find.text('Ramesh Sharma'), findsOneWidget);
-    expect(find.text('PRESENT'), findsWidgets);
   });
 }

@@ -3,10 +3,9 @@ import '../../core/config/app_theme.dart';
 import '../../core/state/auth_state.dart';
 import '../../core/state/mobile_store.dart';
 import '../../core/state/sync_engine.dart';
-import '../../widgets/advanced/sync_status_pill.dart';
 import '../../widgets/common/stat_summary_card.dart';
 import '../../widgets/common/status_chip.dart';
-import '../sync/sync_queue_screen.dart';
+
 
 class MobileDashboardScreen extends StatelessWidget {
   final AuthState authState;
@@ -40,40 +39,7 @@ class MobileDashboardScreen extends StatelessWidget {
             : '0.0';
 
         return Scaffold(
-          appBar: AppBar(
-            title: Row(
-              children: [
-                const Icon(Icons.precision_manufacturing, size: 20, color: Color(0xFF60A5FA)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    authState.role.displayName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              // Sync Status Pill in AppBar
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Center(
-                  child: SyncStatusPill(
-                    syncEngine: syncEngine,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SyncQueueScreen(store: store, syncEngine: syncEngine),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: Colors.transparent,
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -83,12 +49,19 @@ class MobileDashboardScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.slateDark, Color(0xFF1E293B)],
+                    gradient: LinearGradient(
+                      colors: AppTheme.getGradientForRole(authState.role),
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.getPrimaryForRole(authState.role).withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -110,7 +83,7 @@ class MobileDashboardScreen extends StatelessWidget {
                           Text(
                             authState.companyName,
                             style: const TextStyle(
-                              color: Color(0xFF94A3B8),
+                              color: Color(0xFFDBEAFE),
                               fontSize: 12,
                             ),
                           ),
@@ -118,20 +91,24 @@ class MobileDashboardScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0F766E).withValues(alpha: 0.4),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF14B8A6), width: 0.5),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 0.5),
                             ),
                             child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.shield_outlined, size: 12, color: Color(0xFF2DD4BF)),
+                                Icon(Icons.shield_outlined, size: 12, color: Colors.white),
                                 SizedBox(width: 4),
-                                Text(
-                                  'Date-Lock Active (Asia/Kolkata)',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFF2DD4BF),
-                                    fontWeight: FontWeight.bold,
+                                Flexible(
+                                  child: Text(
+                                    'Date-Lock Active (IST)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -140,11 +117,12 @@ class MobileDashboardScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
@@ -157,34 +135,44 @@ class MobileDashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Phase 4 Quick Hardware Tools Action Bar
+                // Phase 4 Quick Hardware Tools Action Bar (Light Theme)
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E293B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppTheme.slateDark,
+                          elevation: 0,
+                          side: const BorderSide(color: Color(0xFFE2E8F0)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: onOpenScanner,
-                        icon: const Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF60A5FA)),
-                        label: const Text('SCAN QR CODE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.qr_code_scanner, size: 18, color: AppTheme.primaryBlue),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('SCAN QR CODE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E293B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppTheme.slateDark,
+                          elevation: 0,
+                          side: const BorderSide(color: Color(0xFFE2E8F0)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: onOpenChallanCapture,
-                        icon: const Icon(Icons.camera_alt, size: 18, color: Color(0xFF34D399)),
-                        label: const Text('CHALLAN PHOTO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.camera_alt, size: 18, color: Color(0xFF059669)),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('CHALLAN PHOTO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
                       ),
                     ),
                   ],
@@ -192,10 +180,10 @@ class MobileDashboardScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Quick Action Primary CTA for Supervisors
+                // Quick Action Primary CTA for Supervisors and Admins
                 if (authState.role == UserRole.supervisor ||
-                    authState.role == UserRole.attendanceUser ||
-                    authState.role == UserRole.admin) ...[
+                    authState.role == UserRole.admin ||
+                    authState.role == UserRole.superAdmin) ...[
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -299,61 +287,88 @@ class MobileDashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
 
-                ...store.stockItems.where((s) => s.isLow).map((item) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
+                if (store.stockItems.where((s) => s.isLow).isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.slateDark,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${item.code} • Min: ${item.minStock} ${item.unit}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textMuted,
-                              ),
-                            ),
-                          ],
+                    child: Column(
+                      children: const [
+                        Icon(Icons.inventory_2_outlined, color: Color(0xFF94A3B8), size: 32),
+                        SizedBox(height: 8),
+                        Text(
+                          'No Low Stock Alerts',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.slateDark),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${item.currentStock} ${item.unit}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.dangerCrimson,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const StatusChip(
-                              label: 'LOW',
-                              tone: ChipTone.danger,
-                            ),
-                          ],
+                        SizedBox(height: 2),
+                        Text(
+                          'All material levels are currently within safe thresholds.',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
-                  );
-                }),
+                  )
+                else
+                  ...store.stockItems.where((s) => s.isLow).map((item) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.slateDark,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${item.code} • Min: ${item.minStock} ${item.unit}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${item.currentStock} ${item.unit}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.dangerCrimson,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const StatusChip(
+                                label: 'LOW',
+                                tone: ChipTone.danger,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
               ],
             ),
           ),

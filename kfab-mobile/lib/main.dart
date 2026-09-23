@@ -4,6 +4,7 @@ import 'core/config/supabase_config.dart';
 import 'core/state/auth_state.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell_screen.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +14,9 @@ void main() async {
 }
 
 class KfabMobileApp extends StatefulWidget {
-  const KfabMobileApp({super.key});
+  final bool showSplash;
+
+  const KfabMobileApp({super.key, this.showSplash = true});
 
   @override
   State<KfabMobileApp> createState() => _KfabMobileAppState();
@@ -42,10 +45,12 @@ class _KfabMobileAppState extends State<KfabMobileApp> {
         return MaterialApp(
           title: 'KFAB BASIC Mobile',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          home: _authState.isAuthenticated
-              ? MainShellScreen(authState: _authState)
-              : LoginScreen(authState: _authState),
+          theme: AppTheme.getThemeForRole(_authState.role),
+          home: widget.showSplash
+              ? SplashScreen(authState: _authState)
+              : (_authState.isAuthenticated
+                  ? MainShellScreen(authState: _authState)
+                  : LoginScreen(authState: _authState)),
         );
       },
     );

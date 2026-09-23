@@ -1,299 +1,451 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import {
-  LayoutDashboard,
-  CalendarCheck,
-  Boxes,
-  Truck,
-  Users,
-  FileSpreadsheet,
-  Settings,
-  Search,
   Bell,
-  HardHat,
-  Plus,
-  Building2,
+  Search,
   Clock,
+  Building2,
+  CheckCircle2,
+  ShieldCheck,
+  Sparkles,
+  X,
 } from "lucide-react";
-import {
-  INITIAL_WORKERS,
-  INITIAL_STOCK,
-  INITIAL_TRANSACTIONS,
-} from "@/lib/mock-data";
+import { AppUser, getStoredSession, saveStoredSession } from "@/lib/auth-store";
+import { StockMaterial, SupplyTransaction, WorkerRecord } from "@/lib/mock-data";
+import { LoginView } from "@/components/views/login-view";
+import { SplashScreen } from "@/components/common/splash-screen";
+import { Kfab360Sidebar, NavTab } from "@/components/common/kfab360-sidebar";
+import { FloatingChatButton } from "@/components/common/floating-chat-button";
+
+// All Enterprise Views
 import { DashboardView } from "@/components/views/dashboard-view";
+import { UsersView } from "@/components/views/users-view";
 import { AttendanceView } from "@/components/views/attendance-view";
 import { StockView } from "@/components/views/stock-view";
+import { LedgerView } from "@/components/views/ledger-view";
 import { SuppliesView } from "@/components/views/supplies-view";
+import { AccountsView } from "@/components/views/accounts-view";
 import { EmployeesView } from "@/components/views/employees-view";
 import { ReportsView } from "@/components/views/reports-view";
 import { SettingsView } from "@/components/views/settings-view";
+import { ChatView } from "@/components/views/chat-view";
 
-type NavTab =
-  | "dashboard"
-  | "attendance"
-  | "stock"
-  | "supplies"
-  | "employees"
-  | "reports"
-  | "settings";
+// Supervisor Operations Views (from Kfab360)
+import { DailyReportsView } from "@/components/views/daily-reports-view";
+import { ProductionView } from "@/components/views/production-view";
+import { MachinesView } from "@/components/views/machines-view";
+import { QaqcView } from "@/components/views/qaqc-view";
+import { IssuesView } from "@/components/views/issues-view";
+import { RequirementsView } from "@/components/views/requirements-view";
+
+const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: string }> = {
+  dashboard: {
+    title: "Executive Operations Dashboard",
+    subtitle: "Real-time plant KPI indicators, fabrication throughput, and inventory telemetry.",
+    category: "Operations",
+  },
+  chat: {
+    title: "Team Channels & Secure Role-Scoped Messaging",
+    subtitle: "WhatsApp-style enterprise chat with photo attachments, Super Admin group management, and granular role visibility isolation.",
+    category: "Communications",
+  },
+  "daily-reports": {
+    title: "Daily Shift Operations & Site Reports (DPR)",
+    subtitle: "Guided 10-step site logging for task execution, worker muster, crane runtime, and QA observations.",
+    category: "Site Operations",
+  },
+  production: {
+    title: "Fabrication Bay Production & Tonnage Output",
+    subtitle: "Bay-level throughput, planned vs completed tonnage, scrap rate, and machine efficiency.",
+    category: "Shop Floor",
+  },
+  machines: {
+    title: "Machinery, Cranes & Equipment Telemetry",
+    subtitle: "Overhead cranes, CNC cutting gantry, SAW automatic welders, runtime, and preventive maintenance.",
+    category: "Plant Machinery",
+  },
+  qaqc: {
+    title: "Quality Assurance & NDT Weld Inspections",
+    subtitle: "Ultrasonic (UT), Radiography (RT), Dye Penetrant (DPT) tests, and AWS D1.1 compliance.",
+    category: "Quality Control",
+  },
+  issues: {
+    title: "Shop Floor Issues & Resolution Bottlenecks",
+    subtitle: "Tracking fit-up delays, crane breakdowns, drawing RFIs, and repair sign-offs.",
+    category: "Operations",
+  },
+  requirements: {
+    title: "Consumables & Material Requisitions",
+    subtitle: "Welding electrodes, shielding gases, grinding wheels, and urgent raw steel requests.",
+    category: "Store Requisitions",
+  },
+  users: {
+    title: "User Management & RBAC Security",
+    subtitle: "Security role assignments, credential overrides, and multi-tenant access control.",
+    category: "System Admin",
+  },
+  attendance: {
+    title: "Daily Attendance Muster Master",
+    subtitle: "Workforce muster roll, shift allocations, and midnight date lock records.",
+    category: "Shop Floor",
+  },
+  stock: {
+    title: "Fabrication Material Stock & Inventory",
+    subtitle: "Current warehouse raw material stock, reorder thresholds, and bin locations.",
+    category: "Warehouse",
+  },
+  ledger: {
+    title: "Real-Time Atomic Stock Ledger",
+    subtitle: "Append-only chronological audit trail of inward goods, shop floor usage, and dispatches.",
+    category: "Audit & Ledger",
+  },
+  supplies: {
+    title: "Inward Goods & Vendor Challans",
+    subtitle: "Material gate entry receipts, supplier challan scans, and weighbridge verification.",
+    category: "Gate Entry",
+  },
+  accounts: {
+    title: "Accounts & Commercial 3-Way Reconciliation",
+    subtitle: "Commercial ledger, 3-way matching (PO, Challan, Invoice), and payment audit.",
+    category: "Commercial",
+  },
+  employees: {
+    title: "Workforce & Personnel Directory",
+    subtitle: "Employee master records, skill classifications, fabrication bay assignments, and ASME welder certs.",
+    category: "Workforce",
+  },
+  reports: {
+    title: "Enterprise Reports Hub & Excel Data Center",
+    subtitle: "Executive summaries, consumption analytics, vendor metrics, and ISO audit spreadsheets.",
+    category: "Analytics",
+  },
+  settings: {
+    title: "Plant Configuration & System Settings",
+    subtitle: "Plant tenancy profiles, business date lock rules, weighbridge tolerances, and system flags.",
+    category: "Configuration",
+  },
+};
 
 export default function KfabBasicApp() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [currentTab, setCurrentTab] = useState<NavTab>("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
-  const [workers] = useState(INITIAL_WORKERS);
-  const [stock] = useState(INITIAL_STOCK);
-  const [transactions] = useState(INITIAL_TRANSACTIONS);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Clean empty collections (zero mock residual data)
+  const [workers, setWorkers] = useState<WorkerRecord[]>([]);
+  const [stock, setStock] = useState<StockMaterial[]>([]);
+  const [transactions, setTransactions] = useState<SupplyTransaction[]>([]);
+
+  useEffect(() => {
+    const session = getStoredSession();
+    if (session) {
+      setCurrentUser(session);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    saveStoredSession(null);
+    setCurrentUser(null);
+    setCurrentTab("dashboard");
+  };
+
+  // Initial splash screen animation (5 seconds progressive video)
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
+  // If not authenticated, render Login Screen as the main screen
+  if (!currentUser) {
+    return (
+      <LoginView
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          if (user.role === "SUPERVISOR") {
+            setCurrentTab("daily-reports");
+          } else if (user.role === "ACCOUNTANT") {
+            setCurrentTab("accounts");
+          } else {
+            setCurrentTab("dashboard");
+          }
+        }}
+      />
+    );
+  }
+
+  const tabMeta = TAB_TITLES[currentTab] || TAB_TITLES.dashboard;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc]">
-      {/* 1. SIDEBAR (Industrial Slate Design) */}
-      <aside className="w-64 flex-shrink-0 flex flex-col bg-[#1e2530] text-slate-200 border-r border-[#2d3748]">
-        {/* Brand & Logo Header */}
-        <div className="p-4 border-b border-[#2d3748] flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs overflow-hidden">
-            <Image
-              src="/logo.png"
-              alt="KFAB Logo"
-              width={36}
-              height={36}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-wide text-white flex items-center gap-1.5">
-              KFAB BASIC
-            </h1>
-            <p className="text-[11px] font-medium text-blue-400 uppercase tracking-wider">
-              Enterprise Portal
-            </p>
-          </div>
-        </div>
+    <div data-role-theme={currentUser.role} className="flex h-screen w-full overflow-hidden bg-[#F8FAFC]">
+      {/* 1. KFAB360 ENTERPRISE LIGHT SIDEBAR */}
+      <Kfab360Sidebar
+        currentTab={currentTab}
+        onSelectTab={(tab) => setCurrentTab(tab)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
-        {/* Company Active Badge */}
-        <div className="px-4 py-2.5 bg-[#161c24] border-b border-[#2d3748] flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
-            <Building2 className="size-3.5 text-blue-400" />
-            KFAB Infra Projects
-          </span>
-          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">
-            PROD
-          </span>
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <button
-            onClick={() => setCurrentTab("dashboard")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "dashboard"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <LayoutDashboard className="size-4 shrink-0" />
-            <span>Dashboard</span>
-          </button>
-
-          <div className="pt-4 px-3 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Daily Operations
-          </div>
-
-          <button
-            onClick={() => setCurrentTab("attendance")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "attendance"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <CalendarCheck className="size-4 shrink-0" />
-            <span>Daily Muster</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("stock")}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "stock"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Boxes className="size-4 shrink-0" />
-              <span>Stock Inventory</span>
-            </div>
-            <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-full font-bold">
-              2 LOW
-            </span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("supplies")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "supplies"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <Truck className="size-4 shrink-0" />
-            <span>Supplies & Inward</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("employees")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "employees"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <Users className="size-4 shrink-0" />
-            <span>Personnel Roster</span>
-          </button>
-
-          <div className="pt-4 px-3 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Management & Audit
-          </div>
-
-          <button
-            onClick={() => setCurrentTab("reports")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "reports"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <FileSpreadsheet className="size-4 shrink-0" />
-            <span>Reports & Excel</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("settings")}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              currentTab === "settings"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-300 hover:bg-[#2d3748] hover:text-white"
-            }`}
-          >
-            <Settings className="size-4 shrink-0" />
-            <span>Settings & Access</span>
-          </button>
-        </nav>
-
-        {/* User Profile / Status Footer */}
-        <div className="p-3 border-t border-[#2d3748] bg-[#161c24] flex items-center gap-3">
-          <div className="size-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-            AD
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-white truncate">Admin & Accounts</p>
-            <p className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Connected (Local)
-            </p>
-          </div>
-        </div>
-      </aside>
-
-      {/* 2. MAIN APPLICATION CONTENT AREA */}
+      {/* 2. MAIN APPLICATION WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-900 capitalize tracking-tight">
-              {currentTab === "dashboard" && "Executive Operations Dashboard"}
-              {currentTab === "attendance" && "Daily Muster Attendance"}
-              {currentTab === "stock" && "Fabrication Material Stock & Ledger"}
-              {currentTab === "supplies" && "Inward Goods & Supplier Challans"}
-              {currentTab === "employees" && "Workforce & Personnel Directory"}
-              {currentTab === "reports" && "Enterprise Reports & Excel Export"}
-              {currentTab === "settings" && "Company Configuration & RBAC"}
-            </h2>
-            <span className="text-xs text-slate-400 font-normal">|</span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
-              <Clock className="size-3.5" />
-              IST Date: 18 Sep 2026 (Active Business Day)
-            </span>
+        {/* Top Executive Header Bar */}
+        <header
+          className="h-16 px-6 flex items-center justify-between shadow-kfab z-10 shrink-0 border-b transition-colors"
+          style={{
+            backgroundColor: "var(--role-navbar-bg)",
+            color: "var(--role-navbar-fg)",
+            borderColor: "var(--role-navbar-border)",
+          }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
+                  style={{
+                    backgroundColor: "var(--role-div-heading-category-bg)",
+                    color: "var(--role-div-heading-category-fg)",
+                    borderColor: "var(--role-div-heading-border)",
+                  }}
+                >
+                  {tabMeta.category}
+                </span>
+                <span className="opacity-40">/</span>
+                <h2
+                  className="text-sm md:text-base font-extrabold tracking-tight truncate"
+                  style={{ color: "var(--role-navbar-fg)" }}
+                >
+                  {tabMeta.title}
+                </h2>
+              </div>
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 pl-3 border-l" style={{ borderColor: "var(--role-navbar-border)" }}>
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border"
+                style={{
+                  backgroundColor: "var(--role-navbar-badge-bg)",
+                  color: "var(--role-navbar-badge-fg)",
+                  borderColor: "var(--role-navbar-border)",
+                }}
+              >
+                <span className="size-2 rounded-full bg-[#16A34A] animate-pulse" />
+                Jejuri MIDC &bull; Shift A Active
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quick Search */}
-            <div className="relative w-64">
-              <Search className="size-4 absolute left-3 top-2.5 text-slate-400" />
+            {/* Dynamic Role Badge */}
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border transition-colors shadow-xs"
+              style={{
+                backgroundColor: "var(--role-badge-bg)",
+                color: "var(--role-badge-text)",
+                borderColor: "var(--role-border)",
+              }}
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: "var(--role-primary)" }}
+              />
+              <span>{currentUser.role.replace("_", " ")}</span>
+            </div>
+
+            {/* Quick Search Bar */}
+            <div className="relative w-44 md:w-60">
+              <Search className="size-4 absolute left-3 top-2.5 opacity-60" style={{ color: "var(--role-navbar-search-text)" }} />
               <input
                 type="text"
-                placeholder="Search records, challans..."
+                placeholder="Search across module..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  backgroundColor: "var(--role-navbar-search-bg)",
+                  color: "var(--role-navbar-search-text)",
+                  borderColor: "var(--role-navbar-search-border)",
+                }}
               />
             </div>
 
             {/* Notification Bell */}
-            <button
-              onClick={() => alert("No unread alerts")}
-              className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <Bell className="size-4.5" />
-              <span className="absolute top-1.5 right-1.5 size-2 bg-rose-500 rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                title="System Notifications"
+                className="p-2 rounded-lg border transition-colors relative cursor-pointer"
+                style={{
+                  backgroundColor: "var(--role-navbar-badge-bg)",
+                  color: "var(--role-navbar-fg)",
+                  borderColor: "var(--role-navbar-border)",
+                }}
+              >
+                <Bell className="size-4" />
+                <span
+                  className="absolute top-1.5 right-1.5 size-2 rounded-full ring-2 ring-white"
+                  style={{ backgroundColor: "var(--role-accent)" }}
+                />
+              </button>
 
-            {/* Primary Action Button */}
-            <button
-              onClick={() => {
-                if (currentTab === "attendance") alert("Opening Muster Entry Form for 18 Sep 2026");
-                else if (currentTab === "stock" || currentTab === "supplies")
-                  alert("Opening Inward Voucher Entry Form");
-                else alert("Action modal for " + currentTab);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
-            >
-              <Plus className="size-3.5" />
-              <span>
-                {currentTab === "attendance"
-                  ? "Mark Muster"
-                  : currentTab === "stock"
-                  ? "Log Material"
-                  : "New Entry"}
-              </span>
-            </button>
+              {/* Notification Popover */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-[#E2E8F0] shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <Bell className="size-3.5 text-[#0F172A]" />
+                      <span className="text-xs font-bold text-[#0F172A]">Plant Notifications</span>
+                    </div>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="text-[#64748B] hover:text-[#0F172A]"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-2.5 rounded-lg bg-slate-100 border border-slate-200 flex items-start gap-2">
+                      <Clock className="size-4 text-[#0F172A] shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Midnight Date Lock Scheduled</p>
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          Daily attendance lock activates at 23:59 IST.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] flex items-start gap-2">
+                      <ShieldCheck className="size-4 text-[#16A34A] shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Weighbridge WB-01 Calibrated</p>
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          Avery 60T gate scale inspection certified.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] flex items-start gap-2">
+                      <Building2 className="size-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Fabrication Bay 1 Active</p>
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          Box girder assembly running on schedule.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        {/* Scrollable Main View Content */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Dynamic View Content Area */}
+        <main className={`flex-1 ${currentTab === "chat" ? "overflow-hidden p-0" : "overflow-y-auto p-6 bg-[#F8FAFC]"}`}>
           {currentTab === "dashboard" && (
             <DashboardView
+              currentUser={currentUser}
               stockMaterials={stock}
               supplyTransactions={transactions}
-              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onNavigateTab={(tab) => setCurrentTab(tab as NavTab)}
             />
           )}
 
+          {currentTab === "chat" && (
+            <ChatView currentUser={currentUser} />
+          )}
+
+          {/* Supervisor Operations Views (Matching Kfab360) */}
+          {currentTab === "daily-reports" && (
+            <DailyReportsView />
+          )}
+
+          {currentTab === "production" && (
+            <ProductionView />
+          )}
+
+          {currentTab === "machines" && (
+            <MachinesView />
+          )}
+
+          {currentTab === "qaqc" && (
+            <QaqcView />
+          )}
+
+          {currentTab === "issues" && (
+            <IssuesView />
+          )}
+
+          {currentTab === "requirements" && (
+            <RequirementsView />
+          )}
+
+          {currentTab === "users" && (
+            <UsersView />
+          )}
+
           {currentTab === "attendance" && (
-            <AttendanceView workers={workers} searchTerm={searchTerm} />
+            <AttendanceView
+              workers={workers}
+              searchTerm={searchTerm}
+            />
           )}
 
           {currentTab === "stock" && (
-            <StockView stockMaterials={stock} searchTerm={searchTerm} />
+            <StockView
+              stockMaterials={stock}
+              searchTerm={searchTerm}
+              onOpenInward={() => setCurrentTab("supplies")}
+            />
+          )}
+
+          {currentTab === "ledger" && (
+            <LedgerView
+              currentUser={currentUser}
+            />
           )}
 
           {currentTab === "supplies" && (
-            <SuppliesView supplyTransactions={transactions} searchTerm={searchTerm} />
+            <SuppliesView
+              supplyTransactions={transactions}
+              searchTerm={searchTerm}
+              onOpenInward={() => { }}
+            />
+          )}
+
+          {currentTab === "accounts" && (
+            <AccountsView
+              currentUser={currentUser}
+            />
           )}
 
           {currentTab === "employees" && (
-            <EmployeesView workers={workers} searchTerm={searchTerm} />
+            <EmployeesView
+              workers={workers}
+              searchTerm={searchTerm}
+            />
           )}
 
-          {currentTab === "reports" && <ReportsView />}
+          {currentTab === "reports" && (
+            <ReportsView
+              currentUser={currentUser}
+            />
+          )}
 
-          {currentTab === "settings" && <SettingsView />}
+          {currentTab === "settings" && (
+            <SettingsView />
+          )}
         </main>
       </div>
+
+      {/* Floating circular chat button in bottom-right corner styled with role theme */}
+      <FloatingChatButton
+        currentUser={currentUser}
+        onOpenFullChat={() => setCurrentTab("chat")}
+        isFullChatActive={currentTab === "chat"}
+      />
     </div>
   );
 }

@@ -79,13 +79,48 @@ class _QuickUsageScreenState extends State<QuickUsageScreen> {
     return ListenableBuilder(
       listenable: widget.store,
       builder: (context, _) {
-        final selectedItem = widget.store.stockItems.firstWhere(
+        if (widget.store.stockItems.isEmpty) {
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.white.withValues(alpha: 0.9),
+              title: const Text('Floor Material Usage'),
+            ),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.inventory_2_outlined, size: 48, color: Color(0xFF94A3B8)),
+                    SizedBox(height: 12),
+                    Text(
+                      'No Material Inventory Loaded',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Stock ledger will populate once synchronized with the database or when inward materials are received.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final items = widget.store.stockItems;
+        final selectedItem = items.firstWhere(
           (s) => s.code == _selectedMaterialCode,
-          orElse: () => widget.store.stockItems.first,
+          orElse: () => items.first,
         );
 
         return Scaffold(
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
+            backgroundColor: Colors.white.withValues(alpha: 0.9),
             title: const Text('Floor Material Usage'),
           ),
           body: SingleChildScrollView(

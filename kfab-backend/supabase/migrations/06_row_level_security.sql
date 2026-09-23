@@ -344,3 +344,7 @@ CREATE POLICY "audit_logs_select" ON public.audit_logs
       AND public.has_company_role(company_id, 'ADMIN')
     )
   );
+
+-- Ensure v_material_stock view respects caller's RLS policies
+ALTER VIEW public.v_material_stock SET (security_invoker = true);
+

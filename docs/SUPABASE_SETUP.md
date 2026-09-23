@@ -107,14 +107,44 @@ flutter run --dart-define-from-file=.env
 
 ---
 
-## 6. What Has NOT Been Configured Yet
+## 6. Remote Database Schema Status: Fully Deployed & Verified
 
-To maintain a clean separation of steps, the following items have intentionally **not** been implemented yet:
-- Database tables and schema definitions
-- Row Level Security (RLS) policies
-- Authentication flows and providers
-- Supabase Edge Functions
-- Database queries or business logic
-- Remote database migrations
+All database migrations (01 through 06) and the master seed data script have been executed and verified live against the remote Supabase database:
 
-These will be constructed in subsequent steps once you have provisioned the project and are ready to apply schemas.
+1. **Active Tables & Views (16 / 16 Verified with RLS)**:
+   - `profiles` (User metadata & super-admin flag)
+   - `companies` (Multi-tenant root container)
+   - `company_members` (Tenant membership & RBAC role)
+   - `role_permissions` (Granular permission matrix)
+   - `employees` (Workforce roster)
+   - `employee_assignments` (Supervisor worker allocation)
+   - `attendance` (Server-locked daily muster register)
+   - `units` (Units of measurement master)
+   - `materials` (Inventory catalog & specs)
+   - `suppliers` (Vendor directory)
+   - `stock_inward` (Material receipts & delivery challans)
+   - `stock_outward` (Dispatches to sites)
+   - `stock_usage` (Shop-floor consumption)
+   - `correction_requests` (Formal audit & correction workflow)
+   - `audit_logs` (Append-only immutable audit trail)
+   - `v_material_stock` (Dynamic stock ledger calculation view with security_invoker)
+
+2. **Tenant Master Seed**:
+   - Default Company: `KFAB Infra Projects Pvt Ltd` (Code: `KFAB`)
+   - Standard Units: `KG`, `TON`, `NOS`, `LITRE`, `METER`, `MM`, `BAG`, `BOX`, `SET`
+   - Initial Materials: `MAT-001` to `MAT-005` (Plates, Beams, Electrodes, Primer, Bolts)
+   - Initial Suppliers: Tata Steel, Jindal Steel & Power, Esab India
+   - Initial Employees: `EMP-001` to `EMP-005` (Welders, Fitters, Operators)
+
+3. **Connecting Users & Establishing Super Admin**:
+   - When a user signs up via Supabase Auth, a row is automatically created in `public.profiles` via the `on_auth_user_created` trigger.
+   - To grant initial Super Admin access, run in Supabase SQL Editor:
+     ```sql
+     UPDATE public.profiles SET is_super_admin = true WHERE id = '<auth_user_id>';
+     ```
+   - To link a user to the default company `KFAB` as `ADMIN`:
+     ```sql
+     INSERT INTO public.company_members (company_id, user_id, role, status)
+     VALUES ('a0000000-0000-0000-0000-000000000001', '<auth_user_id>', 'ADMIN', 'ACTIVE');
+     ```
+

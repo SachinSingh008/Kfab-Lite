@@ -1,34 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
+  /* KFAB360 Unified Master Palette (Derived from the Architectural Login Screen) */
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
-  --sidebar: #1e2530;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-muted: #94a3b8;
-  --sidebar-accent: #2d3748;
-  --sidebar-active: #2563eb;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --success: #10b981;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-active: #0f172a;
+  
+  /* Primary & Accent Tones */
+  --primary: #0f172a;
+  --primary-hover: #1e293b;
+  --primary-royal: #0f172a;
+  --primary-action: #0f172a;
+  --industrial-orange: #f59e0b;
+  --industrial-orange-hover: #d97706;
+  --steel-blue: #475569;
+  --soft-blue: #f1f5f9;
+  
+  /* Semantic Status */
+  --success: #16a34a;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  --error: #dc2626;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --muted: #64748b;
+}
+
+/* ============================================================ */
+/* DYNAMIC ROLE-BASED COLOR THEMES */
+/* ============================================================ */
+
+/* 1. Super Admin: Authoritative Slate #0F172A + Amber #F59E0B (Same as it is) */
+:root,
+[data-role-theme="SUPER_ADMIN"] {
+  --role-primary: #0f172a;
+  --role-primary-hover: #1e293b;
+  --role-accent: #f59e0b;
+  --role-accent-hover: #d97706;
+  --role-badge-bg: #f1f5f9;
+  --role-badge-text: #0f172a;
+  --role-border: #e2e8f0;
+  --role-subtle: #f8fafc;
+  --role-header-border: #cbd5e1;
+  --role-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.15);
+
+  /* Sidebar: Same as it is (Clean White) */
+  --role-sidebar-bg: #ffffff;
+  --role-sidebar-fg: #0f172a;
+  --role-sidebar-border: #e2e8f0;
+  --role-sidebar-subtle: #f8fafc;
+  --role-sidebar-section-title: #64748b;
+  --role-sidebar-item-fg: #475569;
+  --role-sidebar-item-hover-bg: #f1f5f9;
+  --role-sidebar-item-hover-fg: #0f172a;
+  --role-sidebar-item-active-bg: #0f172a;
+  --role-sidebar-item-active-fg: #ffffff;
+  --role-sidebar-item-active-accent: #f59e0b;
+
+  /* Navbar: Same as it is (Clean White) */
+  --role-navbar-bg: #ffffff;
+  --role-navbar-fg: #0f172a;
+  --role-navbar-border: #e2e8f0;
+  --role-navbar-muted: #64748b;
+  --role-navbar-badge-bg: #f1f5f9;
+  --role-navbar-badge-fg: #0f172a;
+  --role-navbar-search-bg: #f8fafc;
+  --role-navbar-search-border: #e2e8f0;
+  --role-navbar-search-text: #0f172a;
+
+  /* Div Headings: Slate */
+  --role-div-heading-color: #0f172a;
+  --role-div-heading-category-bg: #f1f5f9;
+  --role-div-heading-category-fg: #64748b;
+  --role-div-heading-border: #e2e8f0;
+}
+
+/* 2. Admin: RED THEME (#DC2626 / Light Red Surface + Crimson Selected Tab) */
+[data-role-theme="ADMIN"] {
+  --role-primary: #dc2626;
+  --role-primary-hover: #b91c1c;
+  --role-accent: #ef4444;
+  --role-accent-hover: #dc2626;
+  --role-badge-bg: #fee2e2;
+  --role-badge-text: #991b1b;
+  --role-border: #fca5a5;
+  --role-subtle: #fff5f5;
+  --role-header-border: #fca5a5;
+  --role-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.15);
+
+  /* Sidebar: Light Red Theme */
+  --role-sidebar-bg: #fff5f5;
+  --role-sidebar-fg: #1e293b;
+  --role-sidebar-border: #fecaca;
+  --role-sidebar-subtle: #fee2e2;
+  --role-sidebar-section-title: #991b1b;
+  --role-sidebar-item-fg: #7f1d1d;
+  --role-sidebar-item-hover-bg: #fee2e2;
+  --role-sidebar-item-hover-fg: #450a0a;
+  --role-sidebar-item-active-bg: #dc2626;
+  --role-sidebar-item-active-fg: #ffffff;
+  --role-sidebar-item-active-accent: #f87171;
+
+  /* Navbar: Light Red Theme */
+  --role-navbar-bg: #fff5f5;
+  --role-navbar-fg: #7f1d1d;
+  --role-navbar-border: #fecaca;
+  --role-navbar-muted: #991b1b;
+  --role-navbar-badge-bg: #fee2e2;
+  --role-navbar-badge-fg: #991b1b;
+  --role-navbar-search-bg: #ffffff;
+  --role-navbar-search-border: #fca5a5;
+  --role-navbar-search-text: #0f172a;
+
+  /* Div Headings: Deep Crimson Red */
+  --role-div-heading-color: #dc2626;
+  --role-div-heading-category-bg: #fee2e2;
+  --role-div-heading-category-fg: #991b1b;
+  --role-div-heading-border: #fca5a5;
+}
+
+/* 3. Supervisor: LIGHT LEMON YELLOW (Sidebar & Navbar) + NORMAL YELLOW (Selected Tab) */
+[data-role-theme="SUPERVISOR"] {
+  --role-primary: #ca8a04;
+  --role-primary-hover: #a16207;
+  --role-accent: #facc15;
+  --role-accent-hover: #eab308;
+  --role-badge-bg: #fef08a;
+  --role-badge-text: #713f12;
+  --role-border: #fde047;
+  --role-subtle: #fefce8;
+  --role-header-border: #fde047;
+  --role-shadow: 0 4px 14px 0 rgba(202, 138, 4, 0.15);
+
+  /* Sidebar: Light Lemon Yellow Theme */
+  --role-sidebar-bg: #fefce8;
+  --role-sidebar-fg: #0f172a;
+  --role-sidebar-border: #fef08a;
+  --role-sidebar-subtle: #fef9c3;
+  --role-sidebar-section-title: #854d0e;
+  --role-sidebar-item-fg: #713f12;
+  --role-sidebar-item-hover-bg: #fef08a;
+  --role-sidebar-item-hover-fg: #0f172a;
+  /* Selected Tab: Yellow Normal with dark text */
+  --role-sidebar-item-active-bg: #facc15;
+  --role-sidebar-item-active-fg: #0f172a;
+  --role-sidebar-item-active-accent: #ca8a04;
+
+  /* Navbar: Light Lemon Yellow Theme */
+  --role-navbar-bg: #fefce8;
+  --role-navbar-fg: #713f12;
+  --role-navbar-border: #fef08a;
+  --role-navbar-muted: #854d0e;
+  --role-navbar-badge-bg: #fef08a;
+  --role-navbar-badge-fg: #713f12;
+  --role-navbar-search-bg: #ffffff;
+  --role-navbar-search-border: #fde047;
+  --role-navbar-search-text: #0f172a;
+
+  /* Div Headings: Rich Golden Amber / Bronze */
+  --role-div-heading-color: #854d0e;
+  --role-div-heading-category-bg: #fef9c3;
+  --role-div-heading-category-fg: #713f12;
+  --role-div-heading-border: #fde047;
+}
+
+/* 4. Accountant: LIGHT GREEN (Sidebar & Navbar) + DARK GREEN (Selected Tab / Section) */
+[data-role-theme="ACCOUNTANT"],
+[data-role-theme="ACCOUNTS"] {
+  --role-primary: #15803d;
+  --role-primary-hover: #166534;
+  --role-accent: #22c55e;
+  --role-accent-hover: #15803d;
+  --role-badge-bg: #dcfce7;
+  --role-badge-text: #166534;
+  --role-border: #86efac;
+  --role-subtle: #f0fdf4;
+  --role-header-border: #86efac;
+  --role-shadow: 0 4px 14px 0 rgba(21, 128, 61, 0.15);
+
+  /* Sidebar: Light Green Theme */
+  --role-sidebar-bg: #f0fdf4;
+  --role-sidebar-fg: #0f172a;
+  --role-sidebar-border: #bbf7d0;
+  --role-sidebar-subtle: #dcfce7;
+  --role-sidebar-section-title: #14532d;
+  --role-sidebar-item-fg: #166534;
+  --role-sidebar-item-hover-bg: #dcfce7;
+  --role-sidebar-item-hover-fg: #052e16;
+  /* Selected Tab / Section: Dark Green */
+  --role-sidebar-item-active-bg: #15803d;
+  --role-sidebar-item-active-fg: #ffffff;
+  --role-sidebar-item-active-accent: #22c55e;
+
+  /* Navbar: Light Green Theme */
+  --role-navbar-bg: #f0fdf4;
+  --role-navbar-fg: #14532d;
+  --role-navbar-border: #bbf7d0;
+  --role-navbar-muted: #166534;
+  --role-navbar-badge-bg: #dcfce7;
+  --role-navbar-badge-fg: #14532d;
+  --role-navbar-search-bg: #ffffff;
+  --role-navbar-search-border: #86efac;
+  --role-navbar-search-text: #0f172a;
+
+  /* Div Headings: Dark Green */
+  --role-div-heading-color: #15803d;
+  --role-div-heading-category-bg: #dcfce7;
+  --role-div-heading-category-fg: #14532d;
+  --role-div-heading-border: #86efac;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
-/* Subtle scrollbar for data tables and sidebar */
+/* Typography Helpers */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* KFab360 Enterprise Shadow Styles */
+.shadow-kfab {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+}
+
+.shadow-kfab-md {
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+}
+
+.shadow-kfab-lg {
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.07), 0 4px 6px -4px rgba(15, 23, 42, 0.07);
+}
+
+/* Subtle Industrial Steel Grid Watermark */
+.bg-industrial-grid {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Custom Scrollbar for High-Density Enterprise Tables */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
