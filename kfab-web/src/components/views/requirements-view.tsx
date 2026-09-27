@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Package, CheckCircle2, Clock, Search, Plus, AlertCircle } from "lucide-react";
-import { RequirementRecord, INITIAL_REQUIREMENTS } from "@/lib/mock-data";
+import { RequirementRecord } from "@/lib/mock-data";
 
-export function RequirementsView({ reqs = INITIAL_REQUIREMENTS }: { reqs?: RequirementRecord[] }) {
+export function RequirementsView({ reqs = [] }: { reqs?: RequirementRecord[] }) {
   const [search, setSearch] = useState("");
 
   const filtered = reqs.filter((r) =>

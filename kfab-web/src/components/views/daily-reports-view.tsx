@@ -22,7 +22,7 @@ import {
   Layers,
   Check,
 } from "lucide-react";
-import { DailyReportRecord, INITIAL_DAILY_REPORTS } from "@/lib/mock-data";
+import { DailyReportRecord } from "@/lib/mock-data";
 
 interface DailyReportsViewProps {
   reports?: DailyReportRecord[];
@@ -43,7 +43,7 @@ const STEP_LABELS = [
 ] as const;
 
 export function DailyReportsView({
-  reports = INITIAL_DAILY_REPORTS,
+  reports = [],
   onAddReport,
 }: DailyReportsViewProps) {
   const [reportList, setReportList] = useState<DailyReportRecord[]>(reports);
@@ -55,26 +55,26 @@ export function DailyReportsView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [step, setStep] = useState(1);
 
-  // Form State
-  const [formProject, setFormProject] = useState("KFAB-PRJ-001 (Chakan Works)");
+  // Form State - Starts clean with sensible blank defaults
+  const [formProject, setFormProject] = useState("");
   const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
   const [formShift, setFormShift] = useState<"Day Shift" | "Night Shift">("Day Shift");
-  const [formWorkPlanned, setFormWorkPlanned] = useState("Column erection & splice fitup G1-G8");
-  const [formWorkCompleted, setFormWorkCompleted] = useState("G1-G6 columns fully erected & torque checked");
-  const [formPercent, setFormPercent] = useState(75);
-  const [formWorkers, setFormWorkers] = useState(24);
-  const [formWelders, setFormWelders] = useState(8);
-  const [formFitters, setFormFitters] = useState(10);
-  const [formRiggers, setFormRiggers] = useState(6);
-  const [formMachine, setFormMachine] = useState("Hydra Mobile Crane 25T (ACE)");
-  const [formMachineHours, setFormMachineHours] = useState(7.5);
+  const [formWorkPlanned, setFormWorkPlanned] = useState("");
+  const [formWorkCompleted, setFormWorkCompleted] = useState("");
+  const [formPercent, setFormPercent] = useState(0);
+  const [formWorkers, setFormWorkers] = useState(0);
+  const [formWelders, setFormWelders] = useState(0);
+  const [formFitters, setFormFitters] = useState(0);
+  const [formRiggers, setFormRiggers] = useState(0);
+  const [formMachine, setFormMachine] = useState("");
+  const [formMachineHours, setFormMachineHours] = useState(0);
   const [formQa, setFormQa] = useState<"Passed" | "Observation" | "Failed">("Passed");
-  const [formQaNotes, setFormQaNotes] = useState("Ultrasonic weld testing passed with zero linear defects.");
+  const [formQaNotes, setFormQaNotes] = useState("");
   const [formIssueTitle, setFormIssueTitle] = useState("");
   const [formIssueSeverity, setFormIssueSeverity] = useState<"Low" | "Medium" | "High">("Low");
-  const [formReqItem, setFormReqItem] = useState("E7018 Electrodes 250 kg");
-  const [formReqUrgency, setFormReqUrgency] = useState<"Low" | "Medium" | "High">("High");
-  const [formSupervisorNotes, setFormSupervisorNotes] = useState("Shift completed safely with zero near-miss incidents.");
+  const [formReqItem, setFormReqItem] = useState("");
+  const [formReqUrgency, setFormReqUrgency] = useState<"Low" | "Medium" | "High">("Medium");
+  const [formSupervisorNotes, setFormSupervisorNotes] = useState("");
 
   const filteredReports = useMemo(() => {
     return reportList.filter((r) => {

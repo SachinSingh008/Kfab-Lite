@@ -14,8 +14,8 @@ export interface AppUser {
   createdAt: string;
 }
 
-const STORAGE_USERS_KEY = 'kfab_users_store_v4';
-const STORAGE_SESSION_KEY = 'kfab_auth_session_v4';
+const STORAGE_USERS_KEY = 'kfab_users_store_v6';
+const STORAGE_SESSION_KEY = 'kfab_auth_session_v6';
 
 export const DEFAULT_USERS: AppUser[] = [
   {
@@ -27,52 +27,8 @@ export const DEFAULT_USERS: AppUser[] = [
     status: 'ACTIVE',
     createdAt: new Date().toISOString(),
   },
-  {
-    id: 'usr-admin-002',
-    name: 'Plant Admin',
-    username: 'admin',
-    password: 'admin123',
-    role: 'ADMIN',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'usr-supervisor-003',
-    name: 'Bay Supervisor (Imran)',
-    username: 'supervisor',
-    password: 'admin123',
-    role: 'SUPERVISOR',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'usr-supervisor-005',
-    name: 'Shop Supervisor (Vikram)',
-    username: 'supervisor2',
-    password: 'admin123',
-    role: 'SUPERVISOR',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'usr-accountant-004',
-    name: 'Accounts Auditor (Deshmukh)',
-    username: 'accountant',
-    password: 'admin123',
-    role: 'ACCOUNTANT',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'usr-accountant-006',
-    name: 'Billing Accountant (Sneha)',
-    username: 'accountant2',
-    password: 'admin123',
-    role: 'ACCOUNTANT',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-  },
 ];
+
 
 export function getStoredUsers(): AppUser[] {
   if (typeof window === 'undefined') return DEFAULT_USERS;
@@ -88,22 +44,11 @@ export function getStoredUsers(): AppUser[] {
       return DEFAULT_USERS;
     }
     let modified = false;
-    // Guarantee all default demo accounts exist and maintain their canonical roles
-    for (const defUser of DEFAULT_USERS) {
-      const idx = parsed.findIndex(
-        (u) => u.id === defUser.id || u.username.toLowerCase() === defUser.username.toLowerCase()
-      );
-      if (idx === -1) {
-        parsed.push(defUser);
-        modified = true;
-      } else {
-        // Enforce canonical role for default accounts
-        if (parsed[idx].role !== defUser.role) {
-          parsed[idx].role = defUser.role;
-          parsed[idx].name = defUser.name;
-          modified = true;
-        }
-      }
+    // Only push defUser if list has no super admin at all
+    const hasSuperAdmin = parsed.some((u) => u.role === 'SUPER_ADMIN');
+    if (!hasSuperAdmin && DEFAULT_USERS.length > 0) {
+      parsed.unshift(DEFAULT_USERS[0]);
+      modified = true;
     }
 
     if (modified) {
@@ -132,18 +77,6 @@ export function getStoredSession(): AppUser | null {
     const session: AppUser = JSON.parse(raw);
     if (!session) return null;
 
-    // Self-healing: if session has an accountant username or id, force role to ACCOUNTANT
-    if (
-      session.username === 'accountant' ||
-      session.username === 'accountant2' ||
-      session.id === 'usr-accountant-004' ||
-      session.id === 'usr-accountant-006'
-    ) {
-      if (session.role !== 'ACCOUNTANT') {
-        session.role = 'ACCOUNTANT';
-        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
-      }
-    }
     return session;
   } catch {
     return null;
@@ -163,95 +96,98 @@ export function saveStoredSession(user: AppUser | null): void {
   }
 }
 
-export function authenticateUser(usernameInput: string, passwordInput: string): AppUser {
+import { createClient } from './supabase/client';
+
+export async function authenticateUser(usernameInput: string, passwordInput: string): Promise<AppUser> {
   const users = getStoredUsers();
-  const trimmed = usernameInput.trim().toLowerCase();
+  const trimmed = usernameInput.trim();
+  const lower = trimmed.toLowerCase();
   const passwordTrimmed = passwordInput.trim();
 
-  // 1. Guaranteed built-in superadmin credentials
-  if (
-    (trimmed === 'superadmin' || trimmed === 'superadmin@008') &&
-    (passwordTrimmed === 'admin123' || passwordTrimmed === 'Admin@123')
-  ) {
-    let superAdmin = users.find(
-      (u) => u.username.toLowerCase() === 'superadmin' || u.role === 'SUPER_ADMIN'
-    );
-    if (!superAdmin) {
-      superAdmin = { ...DEFAULT_USERS[0], password: passwordTrimmed };
-      saveStoredUsers([superAdmin, ...users]);
-    } else {
-      superAdmin.status = 'ACTIVE';
-      superAdmin.password = passwordTrimmed;
-      saveStoredUsers(users);
+  // 1. Try Supabase Auth first (establishes active authenticated JWT session)
+  const supabase = createClient();
+  if (supabase) {
+    const emailToTry = lower.includes('@') ? lower : `${lower}@kfab.in`;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToTry,
+        password: passwordTrimmed,
+      });
+
+      if (!error && data.user) {
+        // Query user profile from Supabase profiles table
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, email, role, status, is_super_admin')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        const isSuper = profile?.is_super_admin ?? false;
+        let role: AppRole = 'SUPERVISOR';
+        if (isSuper) {
+          role = 'SUPER_ADMIN';
+        } else if (profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'SUPERVISOR' || profile?.role === 'ACCOUNTANT') {
+          role = profile.role;
+        }
+
+        const supabaseUser: AppUser = {
+          id: data.user.id,
+          name: profile?.full_name || data.user.user_metadata?.full_name || trimmed,
+          username: data.user.email || trimmed,
+          password: passwordTrimmed,
+          role,
+          status: profile?.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+          createdAt: data.user.created_at || new Date().toISOString(),
+        };
+
+        if (supabaseUser.status !== 'ACTIVE') {
+          await supabase.auth.signOut();
+          throw new Error('This account has been deactivated. Contact your Super Administrator.');
+        }
+
+        // Sync into stored users
+        const existingIdx = users.findIndex(
+          (u) => u.id === data.user.id || u.username.toLowerCase() === supabaseUser.username.toLowerCase()
+        );
+        if (existingIdx !== -1) {
+          users[existingIdx] = { ...users[existingIdx], ...supabaseUser };
+          saveStoredUsers(users);
+        } else {
+          saveStoredUsers([supabaseUser, ...users]);
+        }
+
+        saveStoredSession(supabaseUser);
+        return supabaseUser;
+      }
+    } catch (authErr) {
+      if (authErr instanceof Error && authErr.message.includes('deactivated')) {
+        throw authErr;
+      }
+      // If live auth fails, fallback to local match
     }
-    saveStoredSession(superAdmin);
-    return superAdmin;
   }
 
-  // 2. Guaranteed admin demo credentials
-  if (trimmed === 'admin' && (passwordTrimmed === 'admin123' || passwordTrimmed === 'admin')) {
-    let admin = users.find(
-      (u) => u.username.toLowerCase() === 'admin' && u.role === 'ADMIN'
-    );
-    if (!admin) {
-      admin = { ...DEFAULT_USERS[1], password: passwordTrimmed };
-      saveStoredUsers([...users, admin]);
-    } else {
-      admin.status = 'ACTIVE';
-      admin.password = passwordTrimmed;
-      saveStoredUsers(users);
-    }
-    saveStoredSession(admin);
-    return admin;
-  }
-
-  // 3. Guaranteed supervisor demo credentials
-  if ((trimmed === 'supervisor' || trimmed === 'supervisor2') && (passwordTrimmed === 'admin123' || passwordTrimmed === 'admin')) {
-    let supervisor = DEFAULT_USERS.find((u) => u.username.toLowerCase() === trimmed);
-    if (!supervisor) {
-      supervisor = users.find((u) => u.username.toLowerCase() === trimmed && u.role === 'SUPERVISOR') || DEFAULT_USERS[2];
-    }
-    saveStoredSession(supervisor);
-    return supervisor;
-  }
-
-  // 4. Guaranteed accountant demo credentials
-  if ((trimmed === 'accountant' || trimmed === 'accountant2') && (passwordTrimmed === 'admin123' || passwordTrimmed === 'admin')) {
-    let accountant = DEFAULT_USERS.find((u) => u.username.toLowerCase() === trimmed);
-    if (!accountant) {
-      accountant = users.find((u) => u.username.toLowerCase() === trimmed && u.role === 'ACCOUNTANT') ||
-        DEFAULT_USERS.find((u) => u.role === 'ACCOUNTANT') ||
-        DEFAULT_USERS[4];
-    }
-    // Guarantee that accountant always has role 'ACCOUNTANT'
-    accountant = { ...accountant, role: 'ACCOUNTANT' };
-    saveStoredSession(accountant);
-    return accountant;
-  }
-
-  // 5. Check against all stored users in system
+  // 2. Direct match in stored users (fallback or offline)
   const found = users.find(
-    (u) => u.username.toLowerCase() === trimmed && u.password === passwordTrimmed
+    (u) =>
+      (u.username.toLowerCase() === lower || u.id.toLowerCase() === lower) &&
+      u.password === passwordTrimmed
   );
 
   if (found) {
     if (found.status !== 'ACTIVE') {
       throw new Error('This account has been deactivated. Contact your Super Administrator.');
     }
-    // Guard against any corrupt cached roles for standard accounts
-    if (found.username.toLowerCase() === 'accountant' || found.username.toLowerCase() === 'accountant2') {
-      found.role = 'ACCOUNTANT';
-    }
     saveStoredSession(found);
     return found;
   }
 
-  // 5. If users store is somehow empty, auto-register as superadmin
+  // 3. Fallback: If no users exist at all, bootstrap initial user
   if (users.length === 0) {
     const initialUser: AppUser = {
       id: `usr-${Date.now()}`,
-      name: usernameInput.split('@')[0] || 'Administrator',
-      username: usernameInput.trim(),
+      name: 'Super Administrator',
+      username: trimmed,
       password: passwordTrimmed,
       role: 'SUPER_ADMIN',
       status: 'ACTIVE',
@@ -262,15 +198,15 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return initialUser;
   }
 
-  throw new Error('Invalid credentials. Use username: "superadmin" and password: "admin123".');
+  throw new Error('Invalid username or password. Please verify your credentials.');
 }
 
-export function createUserRecord(params: {
+export async function createUserRecord(params: {
   name: string;
   username: string;
   password: string;
   role: 'ADMIN' | 'SUPERVISOR' | 'ACCOUNTANT';
-}): AppUser {
+}): Promise<AppUser> {
   const users = getStoredUsers();
   const trimmed = params.username.trim();
 
@@ -282,8 +218,45 @@ export function createUserRecord(params: {
     throw new Error(`Username "${trimmed}" already exists.`);
   }
 
+  let assignedId = `usr-${Date.now()}`;
+  const emailToRegister = trimmed.includes('@') ? trimmed : `${trimmed.toLowerCase()}@kfab.in`;
+
+  // 1. Try Supabase RPC admin_create_user first (creates in auth.users AND public.profiles instantly)
+  const supabase = createClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.rpc('admin_create_user', {
+        new_email: emailToRegister,
+        new_password: params.password,
+        new_name: params.name.trim(),
+        new_role: params.role,
+      });
+
+      if (!error && data?.id) {
+        assignedId = data.id;
+      } else {
+        // Fallback to auth.signUp
+        const { data: signUpData } = await supabase.auth.signUp({
+          email: emailToRegister,
+          password: params.password,
+          options: {
+            data: {
+              full_name: params.name.trim(),
+              role: params.role,
+            },
+          },
+        });
+        if (signUpData?.user?.id) {
+          assignedId = signUpData.user.id;
+        }
+      }
+    } catch (err) {
+      console.warn('[Supabase Sync] Could not register user to Supabase:', err);
+    }
+  }
+
   const newUser: AppUser = {
-    id: `usr-${Date.now()}`,
+    id: assignedId,
     name: params.name.trim(),
     username: trimmed,
     password: params.password,
@@ -297,10 +270,89 @@ export function createUserRecord(params: {
   return newUser;
 }
 
-export function updateUserRecord(
+export async function syncUsersFromSupabase(): Promise<AppUser[]> {
+  const supabase = createClient();
+  if (!supabase) return getStoredUsers();
+
+  try {
+    let fetchedProfiles: Array<{
+      id: string;
+      full_name: string | null;
+      email: string | null;
+      role?: string | null;
+      status?: string | null;
+      is_super_admin: boolean;
+      created_at: string;
+    }> | null = null;
+
+    // 1. Try admin_get_all_users RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_all_users');
+    if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+      fetchedProfiles = rpcData;
+    } else {
+      // 2. Fallback to direct profiles table query
+      const { data: tableData, error: tableError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role, status, is_super_admin, created_at');
+      if (!tableError && tableData && tableData.length > 0) {
+        fetchedProfiles = tableData;
+      }
+    }
+
+    if (!fetchedProfiles || fetchedProfiles.length === 0) {
+      return getStoredUsers();
+    }
+
+    const currentStored = getStoredUsers();
+    const syncedList: AppUser[] = [];
+
+    for (const p of fetchedProfiles) {
+      const existing = currentStored.find(
+        (u) => u.id === p.id || (p.email && u.username.toLowerCase() === p.email.toLowerCase())
+      );
+
+      let computedRole: AppRole = 'SUPERVISOR';
+      if (p.is_super_admin) {
+        computedRole = 'SUPER_ADMIN';
+      } else if (p.role === 'ADMIN' || p.role === 'SUPER_ADMIN' || p.role === 'SUPERVISOR' || p.role === 'ACCOUNTANT') {
+        computedRole = p.role;
+      } else if (existing?.role) {
+        computedRole = existing.role;
+      }
+
+      const computedStatus: 'ACTIVE' | 'INACTIVE' =
+        p.status === 'INACTIVE' || existing?.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+      syncedList.push({
+        id: p.id,
+        name: p.full_name || existing?.name || 'User',
+        username: p.email || existing?.username || 'user',
+        password: existing?.password || '',
+        role: computedRole,
+        status: computedStatus,
+        createdAt: p.created_at || existing?.createdAt || new Date().toISOString(),
+      });
+    }
+
+    // Preserve any local accounts not yet in Supabase
+    for (const u of currentStored) {
+      if (!syncedList.some((s) => s.id === u.id || s.username.toLowerCase() === u.username.toLowerCase())) {
+        syncedList.push(u);
+      }
+    }
+
+    saveStoredUsers(syncedList);
+    return syncedList;
+  } catch (err) {
+    console.warn('[Supabase Sync] Fetch profiles error:', err);
+    return getStoredUsers();
+  }
+}
+
+export async function updateUserRecord(
   id: string,
   updates: Partial<Pick<AppUser, 'name' | 'username' | 'password' | 'role' | 'status'>>
-): AppUser {
+): Promise<AppUser> {
   const users = getStoredUsers();
   const index = users.findIndex((u) => u.id === id);
 
@@ -334,10 +386,63 @@ export function updateUserRecord(
     saveStoredSession(updatedUser);
   }
 
+  // Sync update to Supabase
+  const supabase = createClient();
+  if (supabase) {
+    const targetEmail = updatedUser.username.includes('@')
+      ? updatedUser.username
+      : `${updatedUser.username.toLowerCase()}@kfab.in`;
+
+    try {
+      // 1. First try admin_update_user RPC (updates profiles + auth.users with password)
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user', {
+        target_id: id,
+        new_name: updatedUser.name,
+        new_email: targetEmail,
+        new_password: updates.password || null,
+        new_role: updatedUser.role,
+        new_status: updatedUser.status,
+      });
+
+      if (!rpcError && rpcData?.id && rpcData.id !== id) {
+        // If assigned a real UUID from Supabase, update the local ID
+        updatedUser.id = rpcData.id;
+        users[index].id = rpcData.id;
+        saveStoredUsers(users);
+        if (current && current.id === id) {
+          saveStoredSession(updatedUser);
+        }
+      }
+
+      // 2. Also execute direct profiles update fallback if target is UUID
+      if (id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        await supabase.from('profiles').update({
+          full_name: updatedUser.name,
+          email: targetEmail,
+          role: updatedUser.role,
+          status: updatedUser.status,
+          is_super_admin: updatedUser.role === 'SUPER_ADMIN',
+          updated_at: new Date().toISOString(),
+        }).eq('id', id);
+      }
+
+      // 3. If updating current logged in Supabase session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user?.id === id) {
+        const authUpdates: { password?: string; data?: Record<string, unknown> } = {};
+        if (updates.password) authUpdates.password = updates.password;
+        if (updates.name) authUpdates.data = { full_name: updates.name.trim() };
+        await supabase.auth.updateUser(authUpdates);
+      }
+    } catch (err) {
+      console.warn('[Supabase Sync] Update user error:', err);
+    }
+  }
+
   return updatedUser;
 }
 
-export function deleteUserRecord(id: string): void {
+export async function deleteUserRecord(id: string): Promise<void> {
   const users = getStoredUsers();
   const target = users.find((u) => u.id === id);
 
@@ -351,6 +456,24 @@ export function deleteUserRecord(id: string): void {
     throw new Error('You cannot delete your own logged-in account.');
   }
 
+  // Delete from Supabase
+  const supabase = createClient();
+  if (supabase) {
+    try {
+      // 1. Try RPC admin_delete_user
+      await supabase.rpc('admin_delete_user', { target_id: id });
+
+      // 2. Direct profiles delete fallback
+      if (id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        await supabase.from('profiles').delete().eq('id', id);
+      }
+    } catch (err) {
+      console.warn('[Supabase Sync] Delete user error:', err);
+    }
+  }
+
   const filtered = users.filter((u) => u.id !== id);
   saveStoredUsers(filtered);
 }
+
+

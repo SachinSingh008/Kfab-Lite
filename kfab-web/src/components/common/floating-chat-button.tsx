@@ -24,6 +24,8 @@ import {
   getStoredChatMessages,
   saveStoredChatMessages,
   canUserSeeMessage,
+  markMessagesAsRead,
+  getUnreadMessagesCount,
   SAMPLE_CHAT_IMAGES,
 } from "@/lib/chat-store";
 
@@ -45,6 +47,7 @@ export function FloatingChatButton({
   const [inputText, setInputText] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [imageCaption, setImageCaption] = useState("");
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   // Post-Send Audience Dispatch Modal for Admin
   const [showAdminDispatchModal, setShowAdminDispatchModal] = useState(false);
@@ -68,6 +71,26 @@ export function FloatingChatButton({
     }
   }, [isOpen, activeGroupId]);
 
+  // Compute unread count dynamically and listen for read events
+  useEffect(() => {
+    const updateCount = () => {
+      const currentGroups = groups.length > 0 ? groups : getStoredChatGroups();
+      const currentMessages = messages.length > 0 ? messages : getStoredChatMessages();
+      const count = getUnreadMessagesCount(currentUser.id, currentUser.role, currentGroups, currentMessages);
+      setUnreadCount(count);
+    };
+
+    updateCount();
+
+    const handleUpdate = () => updateCount();
+    window.addEventListener("kfab_chat_read_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("kfab_chat_read_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, [currentUser.id, currentUser.role, groups, messages]);
+
   // Scroll to bottom
   useEffect(() => {
     if (isOpen) {
@@ -87,6 +110,19 @@ export function FloatingChatButton({
     if (m.groupId !== activeGroup?.id) return false;
     return canUserSeeMessage(m, currentUser.id, currentUser.role, activeGroup.members);
   });
+
+  // When chat window is opened, mark visible messages as read
+  useEffect(() => {
+    if (isOpen && visibleMessages.length > 0) {
+      const unreadIds = visibleMessages
+        .filter((m) => m.senderId !== currentUser.id)
+        .map((m) => m.id);
+      if (unreadIds.length > 0) {
+        markMessagesAsRead(currentUser.id, unreadIds);
+        setUnreadCount((prev) => Math.max(0, prev - unreadIds.length));
+      }
+    }
+  }, [isOpen, visibleMessages, currentUser.id]);
 
   // Role Theme Color helper for bottom-right circular button:
   // Super Admin: Green/Black (#0F172A)
@@ -657,15 +693,17 @@ export function FloatingChatButton({
           className={`size-14 md:size-16 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 active:scale-95 ${theme.bg} ${theme.text} ${theme.border} border-2 ${theme.glow} relative group`}
           title={`Open Team Chat (${currentUser.role.replace("_", " ")})`}
         >
-          {/* Animated pulse indicator badge */}
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span
-              className={`relative inline-flex rounded-full h-4 w-4 text-[9px] font-extrabold items-center justify-center ${theme.badgeBg}`}
-            >
-              1
+          {/* Animated pulse indicator badge — only shown when there are actual unread messages */}
+          {unreadCount > 0 && !isOpen && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span
+                className={`relative inline-flex rounded-full h-5 min-w-5 px-1.5 text-[10px] font-extrabold items-center justify-center shadow-md border border-white/40 ${theme.badgeBg}`}
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
             </span>
-          </span>
+          )}
 
           {isOpen ? (
             <X className="size-7 transition-transform group-hover:rotate-90 duration-200" />

@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Wrench, CheckCircle2, AlertTriangle, Clock, Calendar, Search } from "lucide-react";
-import { MachineRecord, INITIAL_MACHINES } from "@/lib/mock-data";
+import { MachineRecord } from "@/lib/mock-data";
 
-export function MachinesView({ machines = INITIAL_MACHINES }: { machines?: MachineRecord[] }) {
+export function MachinesView({ machines = [] }: { machines?: MachineRecord[] }) {
   const [search, setSearch] = useState("");
 
   const filtered = machines.filter((m) =>
@@ -33,7 +33,7 @@ export function MachinesView({ machines = INITIAL_MACHINES }: { machines?: Machi
         >
           <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Operational Uptime</p>
           <p className="text-2xl font-black text-emerald-600 mt-1">
-            {Math.round((operationalCount / machines.length) * 100)}%
+            {machines.length > 0 ? Math.round((operationalCount / machines.length) * 100) : 0}%
           </p>
           <p className="text-xs opacity-70 mt-0.5">{operationalCount} Active Units</p>
         </div>

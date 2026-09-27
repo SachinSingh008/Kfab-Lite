@@ -28,99 +28,12 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
   String? _pendingImageUrl;
   String? _pendingCaption;
 
-  // Sample inspection photos for demo & device testing
-  static const String weldPhoto =
-      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80';
-  static const String challanPhoto =
-      'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80';
-  static const String cranePhoto =
-      'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80';
+  // Demo photo URLs removed — real media comes from Supabase Storage
 
-  // Available Groups
-  final List<ChatGroupModel> _groups = [
-    const ChatGroupModel(
-      id: 'grp-bay1-bridge',
-      name: 'Bay 1 Operations & Accounts Bridge',
-      description: 'Fabrication muster, site QA inspection photos, and invoice audit',
-      avatar: '🏗️',
-      createdBy: 'usr-superadmin',
-      members: [
-        ChatGroupMemberModel(
-          userId: 'usr-superadmin',
-          name: 'Super Administrator',
-          username: 'superadmin',
-          role: UserRole.superAdmin,
-          isGroupLead: true,
-          canViewAll: true,
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-admin',
-          name: 'Plant Admin',
-          username: 'admin',
-          role: UserRole.admin,
-          isGroupLead: true,
-          canViewAll: true,
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-supervisor',
-          name: 'Bay Supervisor (Imran)',
-          username: 'supervisor',
-          role: UserRole.supervisor,
-          isGroupLead: false,
-          canViewAll: false, // "View only his side"
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-supervisor2',
-          name: 'Shop Supervisor (Vikram)',
-          username: 'supervisor2',
-          role: UserRole.supervisor,
-          isGroupLead: false,
-          canViewAll: false, // "View only his side"
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-accountant',
-          name: 'Accounts Auditor (Deshmukh)',
-          username: 'accountant',
-          role: UserRole.accounts,
-          isGroupLead: false,
-          canViewAll: false, // "View only his side"
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-accountant2',
-          name: 'Billing Accountant (Sneha)',
-          username: 'accountant2',
-          role: UserRole.accounts,
-          isGroupLead: false,
-          canViewAll: false, // "View only his side"
-        ),
-      ],
-    ),
-    const ChatGroupModel(
-      id: 'grp-plant-alerts',
-      name: 'All Plant Announcements',
-      description: 'Shift rosters, safety muster, and plant-wide alerts',
-      avatar: '📢',
-      createdBy: 'usr-superadmin',
-      members: [
-        ChatGroupMemberModel(
-          userId: 'usr-superadmin',
-          name: 'Super Administrator',
-          username: 'superadmin',
-          role: UserRole.superAdmin,
-          isGroupLead: true,
-          canViewAll: true,
-        ),
-        ChatGroupMemberModel(
-          userId: 'usr-admin',
-          name: 'Plant Admin',
-          username: 'admin',
-          role: UserRole.admin,
-          isGroupLead: true,
-          canViewAll: true,
-        ),
-      ],
-    ),
-  ];
+
+  // Clean slate: no mock groups. Groups are loaded from Supabase (chat_groups table).
+  final List<ChatGroupModel> _groups = [];
+
 
   // Messages repository
   late List<ChatMessageModel> _allMessages;
@@ -130,70 +43,8 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     super.initState();
     _simulatedRole = widget.authState.role;
 
-    // Initial messages representing the exact user requirement
-    _allMessages = [
-      const ChatMessageModel(
-        id: '1',
-        groupId: 'grp-bay1-bridge',
-        senderId: 'usr-admin',
-        senderName: 'Plant Admin',
-        senderUsername: 'admin',
-        senderRole: UserRole.admin,
-        text: 'Bay 1 Operations and Accounts coordination bridge initialized. Granular privacy isolation is enabled.',
-        time: '09:30 AM',
-        targetScope: TargetScope.all,
-      ),
-      const ChatMessageModel(
-        id: '2',
-        groupId: 'grp-bay1-bridge',
-        senderId: 'usr-supervisor',
-        senderName: 'Imran (Supervisor)',
-        senderUsername: 'supervisor',
-        senderRole: UserRole.supervisor,
-        text: 'Bay 1 column splice G1-G6 torque check completed at 750 N·m. Attached is the site weld photo.',
-        imageUrl: weldPhoto,
-        caption: 'Bay 1 Column Splice Inspection - PASS',
-        time: '10:15 AM',
-        targetScope: TargetScope.leadsAndSender, // Only Supervisor and Admin see this!
-      ),
-      const ChatMessageModel(
-        id: '3',
-        groupId: 'grp-bay1-bridge',
-        senderId: 'usr-accountant',
-        senderName: 'Deshmukh (Accounts)',
-        senderUsername: 'accountant',
-        senderRole: UserRole.accounts,
-        text: 'Reviewing Inward Challan #8849 for 28.5 MT MS Plates. Found rate variance of ₹38,400. Verification required.',
-        imageUrl: challanPhoto,
-        caption: 'Challan #8849 Discrepancy Memo',
-        time: '11:05 AM',
-        targetScope: TargetScope.leadsAndSender, // Only Accountant and Admin see this!
-      ),
-      const ChatMessageModel(
-        id: '4',
-        groupId: 'grp-bay1-bridge',
-        senderId: 'usr-admin',
-        senderName: 'Plant Admin',
-        senderUsername: 'admin',
-        senderRole: UserRole.admin,
-        text: 'Supervisor Imran: Proceed with UT inspection. 25T Hydra crane allocated for 13:00.',
-        time: '11:45 AM',
-        targetScope: TargetScope.role,
-        targetRole: UserRole.supervisor, // Only Admin and Supervisor see this!
-      ),
-      const ChatMessageModel(
-        id: '5',
-        groupId: 'grp-bay1-bridge',
-        senderId: 'usr-admin',
-        senderName: 'Plant Admin',
-        senderUsername: 'admin',
-        senderRole: UserRole.admin,
-        text: 'Accounts: Hold payment voucher for Challan #8849 until procurement credit note arrives.',
-        time: '12:10 PM',
-        targetScope: TargetScope.role,
-        targetRole: UserRole.accounts, // Only Admin and Accountant see this!
-      ),
-    ];
+    // Clean slate: no mock messages. Messages are loaded from Supabase (chat_messages table).
+    _allMessages = [];
   }
 
   @override
@@ -458,18 +309,27 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     );
   }
 
-  // Open Image Picker / Preset Dialog
+  // Open Image Picker / Photo Attachment Dialog
   void _openImageAttachmentDialog() {
+    final urlCtrl = TextEditingController();
+    final captionCtrl = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,7 +338,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Attach Site Inspection Photo',
+                      'Attach Site / Inspection Photo',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                     ),
                     IconButton(
@@ -487,47 +347,57 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Select an inspection capture or quick plant photo preset:',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: urlCtrl,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Photo URL / Storage Link',
+                    hintText: 'https://...',
+                    prefixIcon: const Icon(Icons.link, size: 18),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: captionCtrl,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Caption (Optional)',
+                    hintText: 'Add an inspection note or description...',
+                    prefixIcon: const Icon(Icons.comment, size: 18),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFEFF6FF),
-                    child: Icon(Icons.architecture, color: Color(0xFF2563EB)),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.send, size: 16),
+                    label: const Text('Attach & Send', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      final url = urlCtrl.text.trim();
+                      if (url.isEmpty) return;
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _pendingImageUrl = url;
+                        _pendingCaption = captionCtrl.text.trim();
+                      });
+                      _sendMessage();
+                    },
                   ),
-                  title: const Text('Bay 1 Splice Weld Ultrasonic Check', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('AWS D1.1 ultrasonic weld inspection report photo', style: TextStyle(fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showImagePreviewDialog(weldPhoto, 'Bay 1 Column Splice Inspection - PASS');
-                  },
-                ),
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFECFDF5),
-                    child: Icon(Icons.receipt_long, color: Color(0xFF059669)),
-                  ),
-                  title: const Text('Vendor Gate Pass Tare Challan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Weighbridge entry challan with tare weight discrepancy', style: TextStyle(fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showImagePreviewDialog(challanPhoto, 'Tare Weight Challan #8849 Discrepancy');
-                  },
-                ),
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFFFFBEB),
-                    child: Icon(Icons.fire_truck, color: Color(0xFFD97706)),
-                  ),
-                  title: const Text('25T Hydra Mobile Crane Gantry', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Heavy box girder rigging and bay allocation photo', style: TextStyle(fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showImagePreviewDialog(cranePhoto, 'Bay 2 25T Hydra Crane Girder Placement');
-                  },
                 ),
               ],
             ),
@@ -537,75 +407,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     );
   }
 
-  void _showImagePreviewDialog(String url, String defaultCaption) {
-    final captionCtrl = TextEditingController(text: defaultCaption);
 
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Send Photo Preview', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  url,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, error, stackTrace) => Container(
-                    height: 140,
-                    color: const Color(0xFFF1F5F9),
-                    child: const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.grey)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: captionCtrl,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'Caption',
-                  hintText: 'Add a photo caption...',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              icon: const Icon(Icons.send, size: 16),
-              label: const Text('Attach & Send'),
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _pendingImageUrl = url;
-                  _pendingCaption = captionCtrl.text.trim();
-                });
-                _sendMessage();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // Lightbox Zoom View for Images
   void _openLightbox(String imageUrl, String? caption) {

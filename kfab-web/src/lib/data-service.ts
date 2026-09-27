@@ -1,5 +1,4 @@
 import { createClient } from "./supabase/client";
-import { INITIAL_STOCK, INITIAL_WORKERS, INITIAL_TRANSACTIONS } from "./mock-data";
 
 /**
  * KFAB BASIC — Data & Real-Time Stock Ledger Service

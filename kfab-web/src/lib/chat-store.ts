@@ -45,8 +45,8 @@ export interface ChatGroup {
   members: ChatMember[];
 }
 
-const STORAGE_GROUPS_KEY = "kfab_chat_groups_v5";
-const STORAGE_MESSAGES_KEY = "kfab_chat_messages_v5";
+const STORAGE_GROUPS_KEY = "kfab_chat_groups_v6";
+const STORAGE_MESSAGES_KEY = "kfab_chat_messages_v6";
 
 // Sample fabrication & commercial images (base64 SVG data URLs for instant offline display)
 export const SAMPLE_CHAT_IMAGES = {
@@ -58,181 +58,11 @@ export const SAMPLE_CHAT_IMAGES = {
     "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80",
 };
 
-// Initial Demo Group demonstrating the user's exact specification:
-// - Admin, Supervisor, Accountant
-// - Supervisor's message visible ONLY to Supervisor & Admin (Accountant cannot see)
-// - Accountant's message visible ONLY to Accountant & Admin (Supervisor cannot see)
-// - Admin can see all and send targeted messages
-export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
-  {
-    id: "grp-bay1-bridge",
-    name: "Bay 1 Operations & Accounts Bridge",
-    description: "Multi-department bridge for fabrication muster, material receipts, and billing audit",
-    avatar: "🏗️",
-    createdBy: "usr-superadmin-001",
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    members: [
-      {
-        userId: "usr-superadmin-001",
-        name: "Super Administrator",
-        username: "superadmin",
-        role: "SUPER_ADMIN",
-        isGroupLead: true,
-        canViewAll: true,
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        userId: "usr-admin-002",
-        name: "Plant Admin",
-        username: "admin",
-        role: "ADMIN",
-        isGroupLead: true,
-        canViewAll: true,
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        userId: "usr-supervisor-003",
-        name: "Bay Supervisor (Imran)",
-        username: "supervisor",
-        role: "SUPERVISOR",
-        isGroupLead: false,
-        canViewAll: false, // "View only his side"
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        userId: "usr-supervisor-005",
-        name: "Shop Supervisor (Vikram)",
-        username: "supervisor2",
-        role: "SUPERVISOR",
-        isGroupLead: false,
-        canViewAll: false, // "View only his side"
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        userId: "usr-accountant-004",
-        name: "Accounts Auditor (Deshmukh)",
-        username: "accountant",
-        role: "ACCOUNTANT",
-        isGroupLead: false,
-        canViewAll: false, // "View only his side"
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-      {
-        userId: "usr-accountant-006",
-        name: "Billing Accountant (Sneha)",
-        username: "accountant2",
-        role: "ACCOUNTANT",
-        isGroupLead: false,
-        canViewAll: false, // "View only his side"
-        joinedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-      },
-    ],
-  },
-  {
-    id: "grp-executive-leads",
-    name: "Executive Plant Operations & QA",
-    description: "Plant administrative alerts, compliance certificates, and executive approvals",
-    avatar: "⚡",
-    createdBy: "usr-superadmin-001",
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    members: [
-      {
-        userId: "usr-superadmin-001",
-        name: "Super Administrator",
-        username: "superadmin",
-        role: "SUPER_ADMIN",
-        isGroupLead: true,
-        canViewAll: true,
-        joinedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-      },
-      {
-        userId: "usr-admin-002",
-        name: "Plant Admin",
-        username: "admin",
-        role: "ADMIN",
-        isGroupLead: true,
-        canViewAll: true,
-        joinedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-      },
-    ],
-  },
-];
+// Clean slate: no pre-seeded chat groups
+export const INITIAL_CHAT_GROUPS: ChatGroup[] = [];
 
-export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
-  {
-    id: "msg-1",
-    groupId: "grp-bay1-bridge",
-    senderId: "usr-admin-002",
-    senderName: "Plant Admin",
-    senderUsername: "admin",
-    senderRole: "ADMIN",
-    text: "Welcome to Bay 1 Bridge. Supervisor Imran and Accounts Auditor Deshmukh are connected here. Supervisor operational updates and Accounts commercial notes will follow strict privacy routing.",
-    timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-    timeString: "09:30 AM",
-    targetScope: "ALL",
-    status: "READ",
-  },
-  {
-    id: "msg-2",
-    groupId: "grp-bay1-bridge",
-    senderId: "usr-supervisor-003",
-    senderName: "Bay Supervisor",
-    senderUsername: "supervisor",
-    senderRole: "SUPERVISOR",
-    text: "Bay 1 column splice G1-G6 torque check completed at 750 N·m. Attached is the site inspection photo for QA sign-off.",
-    imageUrl: SAMPLE_CHAT_IMAGES.weldInspection,
-    caption: "Bay 1 Column Splice Inspection - AWS D1.1 Pass",
-    timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-    timeString: "10:15 AM",
-    targetScope: "LEADS_AND_SENDER",
-    status: "READ",
-  },
-  {
-    id: "msg-3",
-    groupId: "grp-bay1-bridge",
-    senderId: "usr-accountant-004",
-    senderName: "Accounts Auditor",
-    senderUsername: "accountant",
-    senderRole: "ACCOUNTANT",
-    text: "Reviewing Inward Challan #TATA-8849 for 28.5 MT MS Plates. Found a billing variance of ₹38,400 against the negotiated purchase order. Attached challan copy for verification.",
-    imageUrl: SAMPLE_CHAT_IMAGES.steelChallan,
-    caption: "Challan #TATA-8849 Audit Memo & Tare Weight Discrepancy",
-    timestamp: new Date(Date.now() - 3600000 * 1.5).toISOString(),
-    timeString: "11:05 AM",
-    targetScope: "LEADS_AND_SENDER",
-    status: "READ",
-  },
-  {
-    id: "msg-4",
-    groupId: "grp-bay1-bridge",
-    senderId: "usr-admin-002",
-    senderName: "Plant Admin",
-    senderUsername: "admin",
-    senderRole: "ADMIN",
-    text: "Imran (Supervisor): Heavy crane lift for Bay 1 is authorized for 13:00. Ensure clear path for 25T Hydra crane.",
-    timestamp: new Date(Date.now() - 3600000 * 1).toISOString(),
-    timeString: "11:45 AM",
-    targetScope: "USERS",
-    targetUserIds: ["usr-supervisor-003"],
-    targetUserNames: ["Bay Supervisor"],
-    status: "READ",
-  },
-  {
-    id: "msg-5",
-    groupId: "grp-bay1-bridge",
-    senderId: "usr-admin-002",
-    senderName: "Plant Admin",
-    senderUsername: "admin",
-    senderRole: "ADMIN",
-    text: "Accounts Team: Hold vendor payment voucher for Challan #8849 until procurement confirms unit rate credit note.",
-    timestamp: new Date(Date.now() - 1800000).toISOString(),
-    timeString: "12:10 PM",
-    targetScope: "USERS",
-    targetUserIds: ["usr-accountant-004"],
-    targetUserNames: ["Accounts Auditor"],
-    status: "READ",
-  },
-];
+// Clean slate: no pre-seeded chat messages
+export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [];
 
 // ============================================================================
 // Core Visibility Scoping Matrix Function
@@ -409,3 +239,65 @@ export function updateChatGroupMembers(
   saveStoredChatGroups([...groups]);
   return groups[groupIdx];
 }
+
+const STORAGE_READ_KEY = "kfab_chat_read_ids_v1";
+
+export function getReadMessageIds(userId: string): string[] {
+  if (typeof window === "undefined" || !userId) return [];
+  try {
+    const raw = localStorage.getItem(`${STORAGE_READ_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markMessagesAsRead(userId: string, messageIds: string[]): void {
+  if (typeof window === "undefined" || !userId || messageIds.length === 0) return;
+  try {
+    const current = new Set(getReadMessageIds(userId));
+    let hasNew = false;
+    for (const id of messageIds) {
+      if (!current.has(id)) {
+        current.add(id);
+        hasNew = true;
+      }
+    }
+    if (hasNew) {
+      localStorage.setItem(`${STORAGE_READ_KEY}_${userId}`, JSON.stringify(Array.from(current)));
+      window.dispatchEvent(new CustomEvent("kfab_chat_read_updated", { detail: { userId } }));
+    }
+  } catch (err) {
+    console.error("Failed to mark messages as read", err);
+  }
+}
+
+export function getUnreadMessagesCount(
+  userId: string,
+  userRole: AppRole,
+  groups?: ChatGroup[],
+  messages?: ChatMessage[]
+): number {
+  if (!userId) return 0;
+  const allGroups = groups || getStoredChatGroups();
+  const allMessages = messages || getStoredChatMessages();
+  if (allMessages.length === 0 || allGroups.length === 0) return 0;
+
+  const readIds = new Set(getReadMessageIds(userId));
+  let unread = 0;
+
+  for (const m of allMessages) {
+    if (m.senderId === userId) continue;
+    if (readIds.has(m.id)) continue;
+
+    const group = allGroups.find((g) => g.id === m.groupId);
+    if (!group) continue;
+
+    if (canUserSeeMessage(m, userId, userRole, group.members)) {
+      unread++;
+    }
+  }
+
+  return unread;
+}
+

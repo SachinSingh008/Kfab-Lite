@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { AlertTriangle, CheckCircle2, Clock, Search, Plus } from "lucide-react";
-import { IssueRecord, INITIAL_ISSUES } from "@/lib/mock-data";
+import { IssueRecord } from "@/lib/mock-data";
 
-export function IssuesView({ issues = INITIAL_ISSUES }: { issues?: IssueRecord[] }) {
+export function IssuesView({ issues = [] }: { issues?: IssueRecord[] }) {
   const [search, setSearch] = useState("");
 
   const filtered = issues.filter((i) =>

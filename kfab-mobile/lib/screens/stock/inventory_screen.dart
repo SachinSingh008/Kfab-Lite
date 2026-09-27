@@ -21,80 +21,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'ALL';
 
-  // Seed standard industrial fabrication steel stock if store is clean
-  final List<StockItem> _defaultInventory = const [
-    StockItem(
-      code: 'PLT-25MM',
-      name: 'MS Plate 25mm (Sailma 350 HI)',
-      category: 'Raw Steel Plates',
-      spec: 'IS 2062 E350BR • Tested with MTC',
-      unit: 'MT',
-      currentStock: 42.5,
-      minStock: 15.0,
-    ),
-    StockItem(
-      code: 'BEAM-ISMB350',
-      name: 'ISMB 350 Heavy Structural Beam',
-      category: 'Structural Sections',
-      spec: 'Sailma E250 / IS 808 Standard',
-      unit: 'MT',
-      currentStock: 18.2,
-      minStock: 10.0,
-    ),
-    StockItem(
-      code: 'E7018-40MM',
-      name: 'Low-Hydrogen Electrodes E7018 (4.0mm)',
-      category: 'Consumables',
-      spec: 'AWS A5.1 / ASME SFA 5.1 (ESAB / D&H)',
-      unit: 'kg',
-      currentStock: 80.0,
-      minStock: 150.0, // Low stock warning!
-    ),
-    StockItem(
-      code: 'CHNL-ISMC200',
-      name: 'ISMC 200 Structural Channel',
-      category: 'Structural Sections',
-      spec: 'Mild Steel E250 Grade',
-      unit: 'MT',
-      currentStock: 12.4,
-      minStock: 8.0,
-    ),
-    StockItem(
-      code: 'GAS-CO2-45L',
-      name: 'CO2 Shielding Gas Cylinders (45L)',
-      category: 'Consumables',
-      spec: 'Industrial Welding Grade 99.8% Purity',
-      unit: 'Cylinders',
-      currentStock: 6.0,
-      minStock: 12.0, // Low stock warning!
-    ),
-    StockItem(
-      code: 'BLT-M24-HSFG',
-      name: 'M24 Grade 8.8 HSFG Structural Bolts',
-      category: 'Fasteners',
-      spec: 'IS 3757 / IS 6649 Heavy Hex Head',
-      unit: 'nos',
-      currentStock: 420.0,
-      minStock: 200.0,
-    ),
-    StockItem(
-      code: 'PRM-EPX-ZINC',
-      name: 'Epoxy Zinc Phosphate Primer (20L Drum)',
-      category: 'Paints & Coating',
-      spec: 'IS 14589 Dual Pack Red Oxide Primer',
-      unit: 'Drums',
-      currentStock: 14.0,
-      minStock: 5.0,
-    ),
-  ];
-
-  List<StockItem> get _combinedItems {
-    final storeItems = widget.store.stockItems;
-    if (storeItems.isNotEmpty) {
-      return storeItems;
-    }
-    return _defaultInventory;
-  }
+  // Live data only — populated from Supabase via MobileStore
+  List<StockItem> get _combinedItems => widget.store.stockItems;
 
   void _showLogUsageSheet(StockItem item) {
     double qty = 5.0;

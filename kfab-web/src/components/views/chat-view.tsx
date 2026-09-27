@@ -42,6 +42,7 @@ import {
   canUserSeeMessage,
   createChatGroup,
   updateChatGroupMembers,
+  markMessagesAsRead,
   SAMPLE_CHAT_IMAGES,
 } from "@/lib/chat-store";
 
@@ -129,6 +130,18 @@ export function ChatView({ currentUser }: ChatViewProps) {
     if (m.groupId !== activeGroup?.id) return false;
     return canUserSeeMessage(m, simulatedUser.id, simulatedUser.role, activeGroup.members);
   });
+
+  // Automatically mark visible messages as read by current user
+  useEffect(() => {
+    if (visibleMessages.length > 0) {
+      const unreadIds = visibleMessages
+        .filter((m) => m.senderId !== simulatedUser.id)
+        .map((m) => m.id);
+      if (unreadIds.length > 0) {
+        markMessagesAsRead(simulatedUser.id, unreadIds);
+      }
+    }
+  }, [visibleMessages, simulatedUser.id]);
 
   // Post-Send Audience Dispatch Modal for Admin
   const [showAdminDispatchModal, setShowAdminDispatchModal] = useState(false);

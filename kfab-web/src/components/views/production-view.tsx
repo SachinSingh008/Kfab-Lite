@@ -13,7 +13,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { ProductionLogRecord, INITIAL_PRODUCTION_LOGS } from "@/lib/mock-data";
+import { ProductionLogRecord } from "@/lib/mock-data";
 
 interface ProductionViewProps {
   logs?: ProductionLogRecord[];
@@ -67,7 +67,7 @@ function ProgressRing({
   );
 }
 
-export function ProductionView({ logs = INITIAL_PRODUCTION_LOGS }: ProductionViewProps) {
+export function ProductionView({ logs = [] }: ProductionViewProps) {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   const totalPlannedMT = logs.reduce((s, r) => s + (r.plannedMT || 0), 0);

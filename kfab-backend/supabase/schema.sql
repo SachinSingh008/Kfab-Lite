@@ -12,6 +12,8 @@
 --   4. 04_inventory_and_stock.sql      - Unit master, materials, stock ledgers (in/out/usage), atomic locks
 --   5. 05_audit_and_indexes.sql        - Append-only audit trail triggers & composite performance indexes
 --   6. 06_row_level_security.sql       - Granular RLS policies enforcing tenant isolation across all tables
+--   7. 07_chat_groups_and_granular_visibility.sql - WhatsApp-style team chat with scoped message visibility
+--   8. 08_supervisor_operations.sql    - DPR, production logs, machines, QA/QC, shop issues, requisitions
 --
 -- Usage with psql / Supabase CLI:
 --   psql -f supabase/schema.sql
@@ -24,3 +26,6 @@
 \ir migrations/04_inventory_and_stock.sql
 \ir migrations/05_audit_and_indexes.sql
 \ir migrations/06_row_level_security.sql
+\ir migrations/07_chat_groups_and_granular_visibility.sql
+\ir migrations/08_supervisor_operations.sql
+

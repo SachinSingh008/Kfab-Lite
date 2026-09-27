@@ -69,14 +69,25 @@ ALTER TABLE public.chat_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
+-- 3.5 Helper function running as SECURITY DEFINER to break RLS recursion loop
+CREATE OR REPLACE FUNCTION public.get_user_chat_group_ids()
+RETURNS TABLE (group_id UUID)
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT cgm.group_id FROM public.chat_group_members cgm WHERE cgm.user_id = auth.uid();
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_user_chat_group_ids() TO anon, authenticated, service_role;
+
 -- 4. RLS POLICIES FOR CHAT GROUPS
 -- Super Admin can see all groups; members see groups they belong to
 CREATE POLICY "chat_groups_select" ON public.chat_groups
   FOR SELECT USING (
     public.is_super_admin()
-    OR id IN (
-      SELECT group_id FROM public.chat_group_members WHERE user_id = auth.uid()
-    )
+    OR id IN (SELECT group_id FROM public.get_user_chat_group_ids())
   );
 
 -- Super Admin or Admin can create groups
@@ -107,10 +118,9 @@ CREATE POLICY "chat_groups_update" ON public.chat_groups
 -- 5. RLS POLICIES FOR CHAT GROUP MEMBERS
 CREATE POLICY "chat_members_select" ON public.chat_group_members
   FOR SELECT USING (
-    public.is_super_admin()
-    OR group_id IN (
-      SELECT group_id FROM public.chat_group_members WHERE user_id = auth.uid()
-    )
+    user_id = auth.uid()
+    OR public.is_super_admin()
+    OR group_id IN (SELECT group_id FROM public.get_user_chat_group_ids())
   );
 
 CREATE POLICY "chat_members_manage" ON public.chat_group_members
@@ -119,13 +129,7 @@ CREATE POLICY "chat_members_manage" ON public.chat_group_members
     OR EXISTS (
       SELECT 1 FROM public.chat_groups g
       WHERE g.id = public.chat_group_members.group_id
-        AND (
-          g.created_by = auth.uid()
-          OR EXISTS (
-            SELECT 1 FROM public.chat_group_members m
-            WHERE m.group_id = g.id AND m.user_id = auth.uid() AND m.is_lead = true
-          )
-        )
+        AND g.created_by = auth.uid()
     )
   );
 

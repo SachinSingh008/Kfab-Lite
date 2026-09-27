@@ -36,60 +36,8 @@ export interface InwardReconciliationRecord {
   paymentStatus: "PAID" | "PENDING" | "ON_HOLD";
 }
 
-const DEFAULT_ACCOUNTS_DATA: InwardReconciliationRecord[] = [
-  {
-    id: "REC-01",
-    challan: "CH-402",
-    invoice: "INV-9921",
-    supplier: "Tata Steel BSL Ltd",
-    material: "MS Plate 20mm IS 2062",
-    billedQty: 24.5,
-    receivedQty: 24.5,
-    unit: "TON",
-    ratePerUnit: 62500,
-    status: "MATCHED",
-    paymentStatus: "PENDING",
-  },
-  {
-    id: "REC-02",
-    challan: "CH-1102",
-    invoice: "INV-AL-4412",
-    supplier: "Air Liquide India",
-    material: "Argon Shielding Gas Cyl",
-    billedQty: 15,
-    receivedQty: 15,
-    unit: "NOS",
-    ratePerUnit: 1850,
-    status: "MATCHED",
-    paymentStatus: "PAID",
-  },
-  {
-    id: "REC-03",
-    challan: "CH-3890",
-    invoice: "INV-Tata-410",
-    supplier: "Tata Steel BSL Ltd",
-    material: "MS Plate 12mm IS 2062",
-    billedQty: 44.0,
-    receivedQty: 42.5,
-    unit: "TON",
-    ratePerUnit: 64000,
-    status: "DISCREPANCY",
-    paymentStatus: "ON_HOLD",
-  },
-  {
-    id: "REC-04",
-    challan: "CH-7719",
-    invoice: "INV-ESAB-109",
-    supplier: "ESAB India Welding",
-    material: "Low Hydrogen Electrode 7018",
-    billedQty: 120,
-    receivedQty: 120,
-    unit: "BOX",
-    ratePerUnit: 1450,
-    status: "MATCHED",
-    paymentStatus: "PAID",
-  },
-];
+// Clean slate: Live reconciliation data populated from Supabase invoices/gate passes
+const DEFAULT_ACCOUNTS_DATA: InwardReconciliationRecord[] = [];
 
 export function AccountsView({ currentUser }: AccountsViewProps) {
   const [records, setRecords] = useState<InwardReconciliationRecord[]>(DEFAULT_ACCOUNTS_DATA);

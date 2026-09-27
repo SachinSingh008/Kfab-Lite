@@ -85,7 +85,7 @@ class KfabNavigationDrawer extends StatelessWidget {
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   labelText: 'Operator Full Name *',
-                  hintText: 'e.g. Imran Shaikh',
+                  hintText: 'e.g. Operator Name',
                   prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   filled: true,

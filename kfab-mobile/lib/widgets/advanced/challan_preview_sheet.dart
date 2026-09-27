@@ -13,11 +13,13 @@ class ChallanPreviewSheet extends StatefulWidget {
 }
 
 class _ChallanPreviewSheetState extends State<ChallanPreviewSheet> {
-  final _vendorController = TextEditingController(text: 'Tata Steel BSL Ltd');
-  final _challanNoController = TextEditingController(text: 'CH-2026-904');
-  final _vehicleController = TextEditingController(text: 'MH-12-RN-8812');
-  final _weightController = TextEditingController(text: '24.50');
-  final _descController = TextEditingController(text: 'MS Plate 20mm IS 2062');
+  // All fields start empty — filled in from real challan capture
+  final _vendorController = TextEditingController();
+  final _challanNoController = TextEditingController();
+  final _vehicleController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _descController = TextEditingController();
+
 
   @override
   void dispose() {

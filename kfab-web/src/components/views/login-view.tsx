@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Eye,
@@ -14,7 +14,7 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
-import { AppUser, authenticateUser } from "@/lib/auth-store";
+import { AppUser, authenticateUser, getStoredUsers } from "@/lib/auth-store";
 
 interface LoginViewProps {
   onLoginSuccess: (user: AppUser) => void;
@@ -22,8 +22,8 @@ interface LoginViewProps {
 
 export function LoginView({ onLoginSuccess }: LoginViewProps) {
   const [selectedRole, setSelectedRole] = useState<"superadmin" | "admin" | "supervisor" | "accountant">("superadmin");
-  const [username, setUsername] = useState("superadmin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,25 +34,28 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotDone, setForgotDone] = useState(false);
 
-  const handleRoleSelect = (role: "superadmin" | "admin" | "supervisor" | "accountant") => {
-    setSelectedRole(role);
+  const handleRoleSelect = (roleKey: "superadmin" | "admin" | "supervisor" | "accountant") => {
+    setSelectedRole(roleKey);
     setError(null);
-    if (role === "superadmin") {
-      setUsername("superadmin");
-      setPassword("admin123");
-    } else if (role === "admin") {
-      setUsername("admin");
-      setPassword("admin123");
-    } else if (role === "supervisor") {
-      setUsername("supervisor");
-      setPassword("admin123");
-    } else {
-      setUsername("accountant");
-      setPassword("admin123");
+    const users = getStoredUsers();
+
+    const roleMap: Record<string, AppUser["role"]> = {
+      superadmin: "SUPER_ADMIN",
+      admin: "ADMIN",
+      supervisor: "SUPERVISOR",
+      accountant: "ACCOUNTANT",
+    };
+
+    const targetRole = roleMap[roleKey];
+    const matchedUser = users.find((u) => u.role === targetRole);
+
+    if (matchedUser) {
+      setUsername(matchedUser.username);
     }
+    setPassword("");
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!username.trim() || !password) {
       setError("Please enter your username and password.");
@@ -62,11 +65,9 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
     setIsLoading(true);
 
     try {
-      const user = authenticateUser(username, password);
-      setTimeout(() => {
-        setIsLoading(false);
-        onLoginSuccess(user);
-      }, 250);
+      const user = await authenticateUser(username, password);
+      setIsLoading(false);
+      onLoginSuccess(user);
     } catch (err: unknown) {
       setIsLoading(false);
       setError(err instanceof Error ? err.message : "Authentication failed. Please verify credentials.");
@@ -235,7 +236,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  placeholder="superadmin"
+                  placeholder="Username or email"
                   className="w-full pl-10 pr-3.5 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-[#0F172A] placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] font-mono transition-all"
                 />
               </div>
@@ -268,7 +269,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  placeholder="admin123"
+                  placeholder="Password"
                   className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-[#0F172A] placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] font-mono transition-all"
                 />
                 <button
@@ -367,7 +368,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Default credentials are <strong className="text-[#0F172A]">superadmin</strong> with password <strong className="text-[#0F172A]">admin123</strong>.
+                  Enter your registered work email to receive password reset instructions, or contact your Super Administrator.
                 </p>
                 <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                   <button

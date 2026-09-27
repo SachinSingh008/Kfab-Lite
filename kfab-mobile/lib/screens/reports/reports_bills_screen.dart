@@ -27,48 +27,9 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
   // 1. BILLS VIEW (Exclusive to Accountant)
   // ============================================================
   Widget _buildBillsView() {
-    final bills = [
-      {
-        'billNo': 'BILL-2026-089',
-        'vendor': 'ABC Engineering Works',
-        'poRef': 'PO-KFAB-042',
-        'challanRef': 'DC-2026-118',
-        'amount': '₹ 3,45,000',
-        'gst': '18% GST (₹ 62,100)',
-        'status': '3-WAY MATCHED',
-        'date': '2026-09-04',
-      },
-      {
-        'billNo': 'BILL-2026-088',
-        'vendor': 'XYZ Structurals & Steels',
-        'poRef': 'PO-KFAB-039',
-        'challanRef': 'DC-2026-112',
-        'amount': '₹ 8,92,400',
-        'gst': '18% GST (₹ 1,60,632)',
-        'status': 'PENDING PO AUDIT',
-        'date': '2026-09-03',
-      },
-      {
-        'billNo': 'BILL-2026-087',
-        'vendor': 'PQR Infra Consumables',
-        'poRef': 'PO-KFAB-041',
-        'challanRef': 'DC-2026-109',
-        'amount': '₹ 1,18,500',
-        'gst': '18% GST (₹ 21,330)',
-        'status': '3-WAY MATCHED',
-        'date': '2026-09-02',
-      },
-      {
-        'billNo': 'BILL-2026-086',
-        'vendor': 'Avery Scales Weighbridge Service',
-        'poRef': 'PO-KFAB-033',
-        'challanRef': 'SRV-2026-004',
-        'amount': '₹ 35,000',
-        'gst': '18% GST (₹ 6,300)',
-        'status': 'APPROVED FOR PAYMENT',
-        'date': '2026-09-01',
-      },
-    ];
+    // Clean slate: Live bills fetched from Supabase / Tally integration
+    final bills = <Map<String, String>>[];
+
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -129,8 +90,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Matched Bills',
-                  value: '₹ 13.9 Lakhs',
-                  subtitle: '100% Verified',
+                  value: bills.isEmpty ? '₹ 0' : '₹ 13.9 L',
+                  subtitle: bills.isEmpty ? 'No bills uploaded' : '100% Verified',
                   color: const Color(0xFF16A34A),
                 ),
               ),
@@ -138,8 +99,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Pending Match',
-                  value: '1 Bill Hold',
-                  subtitle: 'Challan WT mismatch',
+                  value: bills.isEmpty ? '0 Bills' : '1 Bill Hold',
+                  subtitle: bills.isEmpty ? 'Queue clean' : 'Action needed',
                   color: const Color(0xFFD97706),
                 ),
               ),
@@ -175,89 +136,109 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Bills List
-          ...bills.where((b) {
-            if (_selectedFilter == 'MATCHED') return b['status']!.contains('MATCHED');
-            if (_selectedFilter == 'PENDING') return !b['status']!.contains('MATCHED');
-            return true;
-          }).map((bill) {
-            final isMatched = bill['status']!.contains('MATCHED');
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
+          // Bills List or Empty State
+          if (bills.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isMatched ? const Color(0xFFE2E8F0) : const Color(0xFFFED7AA)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        bill['billNo']!,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: Color(0xFF0F172A)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isMatched ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: isMatched ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A),
-                          ),
-                        ),
-                        child: Text(
-                          bill['status']!,
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: isMatched ? const Color(0xFF166534) : const Color(0xFF92400E),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    bill['vendor']!,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
+                  Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  const Text('No Bills or Invoices', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text('PO: ${bill['poRef']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                      const SizedBox(width: 10),
-                      Text('Challan: ${bill['challanRef']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        bill['amount']!,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
-                      ),
-                      Text(
-                        bill['gst']!,
-                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
+                  const Text('Vendor invoices and gate challans will sync here from Supabase.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                 ],
               ),
-            );
-          }),
+            )
+          else
+            ...bills.where((b) {
+              if (_selectedFilter == 'MATCHED') return b['status']!.contains('MATCHED');
+              if (_selectedFilter == 'PENDING') return !b['status']!.contains('MATCHED');
+              return true;
+            }).map((bill) {
+              final isMatched = bill['status']!.contains('MATCHED');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isMatched ? const Color(0xFFE2E8F0) : const Color(0xFFFED7AA)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          bill['billNo']!,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: Color(0xFF0F172A)),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isMatched ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: isMatched ? const Color(0xFF86EFAC) : const Color(0xFFFDE68A),
+                            ),
+                          ),
+                          child: Text(
+                            bill['status']!,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: isMatched ? const Color(0xFF166534) : const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      bill['vendor']!,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text('PO: ${bill['poRef']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        const SizedBox(width: 10),
+                        Text('Challan: ${bill['challanRef']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          bill['amount']!,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
+                        ),
+                        Text(
+                          bill['gst']!,
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
@@ -306,7 +287,7 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
                         color: const Color(0xFFF59E0B),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text('Shift A Active', style: TextStyle(color: Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold)),
+                      child: const Text('Live Telemetry', style: TextStyle(color: Color(0xFF0F172A), fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -326,8 +307,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Output Today',
-                  value: '45.2 MT',
-                  subtitle: 'Planned: 48.0 MT',
+                  value: '0.0 MT',
+                  subtitle: 'No DPR logged yet',
                   color: const Color(0xFF0F172A),
                 ),
               ),
@@ -335,8 +316,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Shop Efficiency',
-                  value: '92.8%',
-                  subtitle: 'Target: 85%',
+                  value: '--',
+                  subtitle: 'Awaiting shift data',
                   color: const Color(0xFF16A34A),
                 ),
               ),
@@ -348,8 +329,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Machine Uptime',
-                  value: '96.4%',
-                  subtitle: 'Cranes & SAW Active',
+                  value: '--',
+                  subtitle: 'Telemetry standby',
                   color: const Color(0xFF2563EB),
                 ),
               ),
@@ -357,8 +338,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
               Expanded(
                 child: _buildMetricTile(
                   title: 'Scrap Rate',
-                  value: '2.4%',
-                  subtitle: 'Below 4.0% limit',
+                  value: '0.0%',
+                  subtitle: 'No scrap reported',
                   color: const Color(0xFF059669),
                 ),
               ),
@@ -372,9 +353,24 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
           ),
           const SizedBox(height: 10),
 
-          _buildBayCard('Bay 1 — Heavy Fit-Up & Assembly', 'KFAB-PRJ-001', '11.2 MT', '12.5 MT', '0.35 MT', '89.6%'),
-          _buildBayCard('Bay 2 — Submerged Arc Welding (SAW)', 'KFAB-PRJ-002', '8.4 MT', '8.0 MT', '0.18 MT', '105.0%'),
-          _buildBayCard('Bay 3 — Shot Blasting & Primer', 'KFAB-PRJ-003', '14.1 MT', '15.0 MT', '0.05 MT', '94.0%'),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.precision_manufacturing_outlined, size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 12),
+                const Text('No Production Reports Logged', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                const SizedBox(height: 4),
+                const Text('When shift supervisors submit Daily Production Reports (DPR), bay outputs will appear here.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -406,45 +402,5 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
     );
   }
 
-  Widget _buildBayCard(String bayName, String prj, String actual, String planned, String scrap, String eff) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(bayName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(eff, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF166534))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text('Project: $prj', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Actual: $actual', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Text('Planned: $planned', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-              Text('Scrap: $scrap', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
+

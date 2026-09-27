@@ -41,14 +41,6 @@ export function DashboardView({
     .filter((t) => t.type === "INWARD")
     .reduce((acc, curr) => acc + (parseFloat(curr.qty) || 0), 0);
 
-  // Production bays status
-  const bays = [
-    { name: "Bay 1: CNC Cutting & Beveling", target: 20.0, actual: 16.5, unit: "T", progress: 82 },
-    { name: "Bay 2: Heavy Girder Fit-Up", target: 15.0, actual: 14.2, unit: "T", progress: 94 },
-    { name: "Bay 3: Submerged Arc Welding", target: 18.0, actual: 12.8, unit: "T", progress: 71 },
-    { name: "Bay 4: Shot Blasting & Surface Prep", target: 25.0, actual: 21.0, unit: "T", progress: 84 },
-    { name: "Bay 5: Industrial Epoxy Painting", target: 22.0, actual: 19.5, unit: "T", progress: 88 },
-  ];
 
   return (
     <div className="space-y-6">
@@ -63,38 +55,38 @@ export function DashboardView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Daily Muster Turnout"
-          value="94.2%"
-          subtitle="49 of 52 Personnel on Duty"
+          value={`${stockMaterials.length + supplyTransactions.length > 0 ? "—" : "0"} Records`}
+          subtitle="Enter attendance data to see muster stats"
           icon={CalendarCheck}
           iconColor="text-[#16A34A]"
           iconBgColor="bg-[#DCFCE7]"
-          trendText="+3.4% Normal"
+          trendText="Awaiting Data"
           trendType="positive"
-          sparklineData={[75, 80, 85, 82, 88, 92, 94]}
+          sparklineData={[0, 0, 0, 0, 0, 0, 0]}
         />
 
         <KpiCard
           title="Today's Material Inward"
-          value={totalInwardToday > 0 ? `${totalInwardToday.toFixed(2)} T` : "24.50 T"}
-          subtitle="2 Shipments Received Today"
+          value={totalInwardToday > 0 ? `${totalInwardToday.toFixed(2)} T` : "0 T"}
+          subtitle={supplyTransactions.filter((t) => t.type === "INWARD").length > 0 ? `${supplyTransactions.filter((t) => t.type === "INWARD").length} Shipments Today` : "No inward today"}
           icon={Truck}
           iconColor="text-[#2563EB]"
           iconBgColor="bg-[#E8F1FF]"
           trendText="Live Sync"
           trendType="positive"
-          sparklineData={[12, 18, 15, 22, 28, 20, 24]}
+          sparklineData={[0, 0, 0, 0, 0, 0, totalInwardToday]}
         />
 
         <KpiCard
           title="Active Fabrication Bays"
-          value="5 of 6 Bays"
-          subtitle="Structural Bridge Girder WO-104"
+          value="— / —"
+          subtitle="Enter production data to track bays"
           icon={HardHat}
           iconColor="text-[#0F172A]"
           iconBgColor="bg-slate-100"
-          trendText="91% Cap"
+          trendText="Awaiting Data"
           trendType="positive"
-          sparklineData={[60, 70, 75, 80, 85, 88, 91]}
+          sparklineData={[0, 0, 0, 0, 0, 0, 0]}
         />
 
         <KpiCard
@@ -136,43 +128,13 @@ export function DashboardView({
             </div>
           </div>
 
-          {/* Multi-Bar Production Progress List */}
-          <div className="mt-4 space-y-4">
-            {bays.map((bay, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0F172A] flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-[#0F172A]" />
-                    {bay.name}
-                  </span>
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="text-[#64748B]">
-                      Actual: <strong className="text-[#0F172A]">{bay.actual} {bay.unit}</strong>
-                    </span>
-                    <span className="text-[#CBD5E1]">/</span>
-                    <span className="text-[#64748B]">
-                      Target: {bay.target} {bay.unit}
-                    </span>
-                    <span className="text-[11px] font-bold text-[#0F172A] w-10 text-right">
-                      {bay.progress}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Styled Progress Bar */}
-                <div className="h-2 w-full bg-[#F1F5F9] rounded-full overflow-hidden relative">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[#0F172A] to-[#1E293B]"
-                    style={{ width: `${bay.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-[#F1F5F9] flex items-center justify-between text-xs text-[#64748B]">
-            <span>Shift Target: <strong>90.0 Metric Tons</strong></span>
-            <span>Recorded Output: <strong className="text-[#16A34A]">84.0 Metric Tons</strong></span>
+          {/* Empty State: no bay data yet */}
+          <div className="mt-4 py-10 flex flex-col items-center justify-center text-center text-[#64748B]">
+            <Layers className="size-10 text-[#CBD5E1] mb-2" />
+            <p className="text-xs font-bold text-[#172033]">No Production Data Yet</p>
+            <p className="text-[11px] text-[#64748B] mt-0.5">
+              Bay throughput will appear here once supervisors submit daily production reports.
+            </p>
           </div>
         </div>
 
@@ -192,84 +154,15 @@ export function DashboardView({
             </div>
           </div>
 
-          {/* SVG Donut Chart Visual */}
-          <div className="my-4 flex flex-col items-center justify-center relative">
-            <svg width="150" height="150" viewBox="0 0 42 42" className="rotate-[-90deg]">
-              {/* Background Ring */}
-              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F1F5F9" strokeWidth="5" />
-              {/* Raw Steel Plates (50%) */}
-              <circle
-                cx="21" cy="21" r="15.9"
-                fill="transparent"
-                stroke="#0F172A"
-                strokeWidth="5"
-                strokeDasharray="50 50"
-                strokeDashoffset="0"
-              />
-              {/* Structural Beams (28%) */}
-              <circle
-                cx="21" cy="21" r="15.9"
-                fill="transparent"
-                stroke="#475569"
-                strokeWidth="5"
-                strokeDasharray="28 72"
-                strokeDashoffset="-50"
-              />
-              {/* Consumables & Gases (15%) */}
-              <circle
-                cx="21" cy="21" r="15.9"
-                fill="transparent"
-                stroke="#F59E0B"
-                strokeWidth="5"
-                strokeDasharray="15 85"
-                strokeDashoffset="-78"
-              />
-              {/* Hardware (7%) */}
-              <circle
-                cx="21" cy="21" r="15.9"
-                fill="transparent"
-                stroke="#10B981"
-                strokeWidth="5"
-                strokeDasharray="7 93"
-                strokeDashoffset="-93"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-xs font-bold text-[#64748B]">Total Stock</span>
-              <span className="text-base font-black text-[#0F172A]">142.5 T</span>
+          {/* Empty State: no inventory data yet */}
+          <div className="my-4 flex flex-col items-center justify-center text-center">
+            <div className="size-28 rounded-full bg-[#F1F5F9] flex items-center justify-center mb-3">
+              <Boxes className="size-10 text-[#CBD5E1]" />
             </div>
           </div>
-
-          {/* Legend Items */}
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-[#0F172A]">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-[#0F172A]" />
-                Raw Steel Plates (IS 2062)
-              </span>
-              <span className="font-bold">50% (71.2 T)</span>
-            </div>
-            <div className="flex items-center justify-between text-[#0F172A]">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-[#475569]" />
-                Structural Beams (ISMB)
-              </span>
-              <span className="font-bold">28% (40.0 T)</span>
-            </div>
-            <div className="flex items-center justify-between text-[#0F172A]">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-[#F59E0B]" />
-                Welding Rods & Gases
-              </span>
-              <span className="font-bold">15% (21.4 T)</span>
-            </div>
-            <div className="flex items-center justify-between text-[#0F172A]">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-sm bg-[#10B981]" />
-                Hardware & Fasteners
-              </span>
-              <span className="font-bold">7% (9.9 T)</span>
-            </div>
+            <p className="text-center text-[11px] text-[#64748B]">No inventory recorded yet.</p>
+            <p className="text-center text-[11px] text-[#64748B]">Add materials to see breakdown.</p>
           </div>
         </div>
       </div>

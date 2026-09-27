@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { ShieldCheck, CheckCircle2, AlertTriangle, Search, FileCheck } from "lucide-react";
-import { QaqcRecord, INITIAL_QAQC } from "@/lib/mock-data";
+import { QaqcRecord } from "@/lib/mock-data";
 
-export function QaqcView({ records = INITIAL_QAQC }: { records?: QaqcRecord[] }) {
+export function QaqcView({ records = [] }: { records?: QaqcRecord[] }) {
   const [search, setSearch] = useState("");
 
   const filtered = records.filter((r) =>
