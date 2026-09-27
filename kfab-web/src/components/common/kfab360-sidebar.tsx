@@ -28,11 +28,13 @@ import {
   HardHat,
   Landmark,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import { AppUser } from "@/lib/auth-store";
 
 export type NavTab =
   | "dashboard"
+  | "logs"
   | "chat"
   | "daily-reports"
   | "production"
@@ -193,6 +195,13 @@ export function Kfab360Sidebar({
             onClick={() => onSelectTab("dashboard")}
             icon={LayoutDashboard}
             label="Executive Dashboard"
+            isShrunk={isShrunk}
+          />
+          <SidebarNavItem
+            active={currentTab === "logs"}
+            onClick={() => onSelectTab("logs")}
+            icon={FileText}
+            label="Logs"
             isShrunk={isShrunk}
           />
           <SidebarNavItem

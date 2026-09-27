@@ -5,14 +5,8 @@ export interface UserResponseDTO {
   id: string;
   fullName: string;
   email: string;
-  username: string;
   role: string;
   status: string;
-  department: string | null;
-  designation: string | null;
-  employeeId: string | null;
-  employeeCode?: string | null;
-  employeeName?: string | null;
   forcePasswordReset: boolean;
   isSuperAdmin: boolean;
   lastLoginAt: string | null;
@@ -23,8 +17,18 @@ export interface UserResponseDTO {
 
 export class UsersService {
   /**
+   * Helper to verify if backend is equipped with Service Role Key
+   */
+  private ensureServiceRoleKey() {
+    if (!hasServiceRoleKey) {
+      throw new Error(
+        'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is required on the backend for administrative identity operations. Please configure it in kfab-backend/.env.'
+      );
+    }
+  }
+
+  /**
    * Lists users with search, filtering, pagination, and sorting.
-   * Parameterized queries through Supabase postgREST builder.
    */
   async listUsers(query: ListUsersQuery): Promise<{
     users: UserResponseDTO[];
@@ -33,12 +37,12 @@ export class UsersService {
     limit: number;
     totalPages: number;
   }> {
-    const { search, role, status, department, sortBy, sortOrder, page, limit } = query;
+    const { search, role, status, sortBy, sortOrder, page, limit } = query;
     const offset = (page - 1) * limit;
 
     let dbQuery = supabaseAdmin
       .from('profiles')
-      .select('id, full_name, email, role, status, department, designation, employee_id, force_password_reset, is_super_admin, last_login_at, session_revoked_at, created_at, updated_at', { count: 'exact' });
+      .select('id, full_name, email, role, status, force_password_reset, last_login_at, session_revoked_at, created_at, updated_at', { count: 'exact' });
 
     // 1. Text Search (parameterized full_name or email)
     if (search && search.trim().length > 0) {
@@ -48,11 +52,7 @@ export class UsersService {
 
     // 2. Role Filter
     if (role && role !== 'ALL') {
-      if (role === 'SUPER_ADMIN') {
-        dbQuery = dbQuery.eq('is_super_admin', true);
-      } else {
-        dbQuery = dbQuery.eq('role', role);
-      }
+      dbQuery = dbQuery.eq('role', role);
     }
 
     // 3. Status Filter
@@ -60,12 +60,7 @@ export class UsersService {
       dbQuery = dbQuery.eq('status', status);
     }
 
-    // 4. Department Filter
-    if (department && department !== 'ALL') {
-      dbQuery = dbQuery.eq('department', department);
-    }
-
-    // 5. Sorting
+    // 4. Sorting
     const columnMap: Record<string, string> = {
       name: 'full_name',
       email: 'email',
@@ -77,7 +72,7 @@ export class UsersService {
     const dbSortColumn = columnMap[sortBy] || 'created_at';
     dbQuery = dbQuery.order(dbSortColumn, { ascending: sortOrder === 'asc' });
 
-    // 6. Pagination
+    // 5. Pagination
     dbQuery = dbQuery.range(offset, offset + limit - 1);
 
     const { data: profiles, error, count } = await dbQuery;
@@ -90,45 +85,19 @@ export class UsersService {
     const total = count ?? 0;
     const totalPages = Math.ceil(total / limit) || 1;
 
-    // Fetch employee codes if mapped
-    const employeeIds = (profiles || [])
-      .map((p) => p.employee_id)
-      .filter((id): id is string => Boolean(id));
-
-    let employeeMap = new Map<string, { code: string; name: string }>();
-    if (employeeIds.length > 0) {
-      const { data: employees } = await supabaseAdmin
-        .from('employees')
-        .select('id, employee_code, name')
-        .in('id', employeeIds);
-
-      if (employees) {
-        employeeMap = new Map(employees.map((e) => [e.id, { code: e.employee_code, name: e.name }]));
-      }
-    }
-
-    const mappedUsers: UserResponseDTO[] = (profiles || []).map((p) => {
-      const emp = p.employee_id ? employeeMap.get(p.employee_id) : undefined;
-      return {
-        id: p.id,
-        fullName: p.full_name || 'User',
-        email: p.email || '',
-        username: p.email || '',
-        role: p.is_super_admin ? 'SUPER_ADMIN' : p.role || 'ADMIN',
-        status: p.status || 'ACTIVE',
-        department: p.department || null,
-        designation: p.designation || null,
-        employeeId: p.employee_id || null,
-        employeeCode: emp?.code || null,
-        employeeName: emp?.name || null,
-        forcePasswordReset: p.force_password_reset ?? false,
-        isSuperAdmin: p.is_super_admin ?? false,
-        lastLoginAt: p.last_login_at || null,
-        sessionRevokedAt: p.session_revoked_at || null,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-      };
-    });
+    const mappedUsers: UserResponseDTO[] = (profiles || []).map((p) => ({
+      id: p.id,
+      fullName: p.full_name || 'User',
+      email: p.email || '',
+      role: p.role || 'SUPERVISOR',
+      status: p.status || 'ACTIVE',
+      forcePasswordReset: p.force_password_reset ?? false,
+      isSuperAdmin: p.role === 'SUPER_ADMIN',
+      lastLoginAt: p.last_login_at || null,
+      sessionRevokedAt: p.session_revoked_at || null,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+    }));
 
     return {
       users: mappedUsers,
@@ -140,12 +109,12 @@ export class UsersService {
   }
 
   /**
-   * Retrieves single user profile by ID with employee data and audit trail.
+   * Retrieves single user profile by ID with audit trail.
    */
   async getUserById(userId: string): Promise<UserResponseDTO & { auditLogs: unknown[] }> {
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
-      .select('id, full_name, email, role, status, department, designation, employee_id, force_password_reset, is_super_admin, last_login_at, session_revoked_at, created_at, updated_at')
+      .select('id, full_name, email, role, status, force_password_reset, last_login_at, session_revoked_at, created_at, updated_at')
       .eq('id', userId)
       .single();
 
@@ -153,41 +122,22 @@ export class UsersService {
       throw new Error(`User not found with ID: ${userId}`);
     }
 
-    let employeeInfo: { code: string; name: string } | undefined;
-    if (profile.employee_id) {
-      const { data: emp } = await supabaseAdmin
-        .from('employees')
-        .select('employee_code, name')
-        .eq('id', profile.employee_id)
-        .maybeSingle();
-
-      if (emp) {
-        employeeInfo = { code: emp.employee_code, name: emp.name };
-      }
-    }
-
-    // Fetch recent audit logs targeting this user
+    // Fetch recent audit logs targeting or executed by this user
     const { data: auditLogs } = await supabaseAdmin
       .from('audit_logs')
-      .select('id, action, module, created_at, user_id, status, reason')
-      .or(`target_user_id.eq.${userId},record_id.eq.${userId}`)
+      .select('id, action, created_at, actor_id, target_user_id, status, details')
+      .or(`target_user_id.eq.${userId},actor_id.eq.${userId}`)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(15);
 
     return {
       id: profile.id,
       fullName: profile.full_name,
       email: profile.email || '',
-      username: profile.email || '',
-      role: profile.is_super_admin ? 'SUPER_ADMIN' : profile.role || 'ADMIN',
+      role: profile.role || 'SUPERVISOR',
       status: profile.status || 'ACTIVE',
-      department: profile.department || null,
-      designation: profile.designation || null,
-      employeeId: profile.employee_id || null,
-      employeeCode: employeeInfo?.code || null,
-      employeeName: employeeInfo?.name || null,
       forcePasswordReset: profile.force_password_reset ?? false,
-      isSuperAdmin: profile.is_super_admin ?? false,
+      isSuperAdmin: profile.role === 'SUPER_ADMIN',
       lastLoginAt: profile.last_login_at || null,
       sessionRevokedAt: profile.session_revoked_at || null,
       createdAt: profile.created_at,
@@ -197,25 +147,22 @@ export class UsersService {
   }
 
   /**
-   * Creates a new user record through Supabase Auth and provisions ERP profile.
+   * Creates a new user record through Supabase Auth Admin API and provisions profile.
    */
-  async createUser(input: CreateUserInput, actorId?: string): Promise<UserResponseDTO> {
-    const cleanEmail = input.email.toLowerCase().trim();
+  async createUser(
+    input: CreateUserInput,
+    actorRole?: string
+  ): Promise<UserResponseDTO> {
+    this.ensureServiceRoleKey();
 
-    // 1. Verify employee existence if mapped
-    if (input.employeeId) {
-      const { data: emp, error: empErr } = await supabaseAdmin
-        .from('employees')
-        .select('id, department, designation')
-        .eq('id', input.employeeId)
-        .maybeSingle();
-
-      if (empErr || !emp) {
-        throw new Error(`Invalid employeeId: Employee record does not exist.`);
-      }
+    // Hierarchy safeguard: Only a SUPER_ADMIN can create another SUPER_ADMIN
+    if (input.role === 'SUPER_ADMIN' && actorRole !== 'SUPER_ADMIN') {
+      throw new Error('Access denied: Only a Super Administrator can provision another Super Administrator.');
     }
 
-    // 2. Check for duplicate email in profiles
+    const cleanEmail = input.email.toLowerCase().trim();
+
+    // Check for duplicate email in profiles
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -226,16 +173,7 @@ export class UsersService {
       throw new Error(`A user with email "${cleanEmail}" already exists.`);
     }
 
-    let createdUserId: string | null = null;
-    const isSuper = input.role === 'SUPER_ADMIN';
-
-    // 3. Create user through authoritative Supabase Auth Admin API (GoTrue)
-    if (!hasServiceRoleKey) {
-      throw new Error(
-        'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is required on the backend for administrative user creation. Please configure it in kfab-backend/.env.'
-      );
-    }
-
+    // 1. Create through Supabase Auth Admin API (authoritative GoTrue)
     const { data: authResult, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
       password: input.initialPassword,
@@ -243,71 +181,57 @@ export class UsersService {
       user_metadata: {
         full_name: input.fullName.trim(),
         role: input.role,
-        department: input.department || null,
       },
     });
 
     if (authError || !authResult.user) {
-      throw new Error(`Supabase Auth creation failed: ${authError?.message || 'Unknown error'}`);
+      throw new Error(`Supabase Auth identity creation failed: ${authError?.message || 'Unknown error'}`);
     }
-    createdUserId = authResult.user.id;
 
-    // 4. Provision ERP Profile in public.profiles
+    const createdUserId = authResult.user.id;
+
+    // 2. Provision Profile in public.profiles
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
       id: createdUserId,
       full_name: input.fullName.trim(),
       email: cleanEmail,
       role: input.role,
       status: input.status,
-      department: input.department || null,
-      designation: input.designation || null,
-      employee_id: input.employeeId || null,
       force_password_reset: input.forcePasswordReset,
-      is_super_admin: isSuper,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
 
     if (profileError) {
-      // Rollback auth identity if profile insertion fails to prevent orphaned records
+      // Rollback auth user if profile insertion fails
       await supabaseAdmin.auth.admin.deleteUser(createdUserId);
       throw new Error(`Profile creation failed: ${profileError.message}`);
-    }
-
-    if (!createdUserId) {
-      throw new Error('User creation failed: No user ID was returned.');
     }
 
     return this.getUserById(createdUserId);
   }
 
   /**
-   * Updates an existing user record.
-   * Safeguards against demoting the last active Super Admin or unauthorized privilege escalation.
+   * Updates an existing user profile and Supabase Auth metadata.
    */
   async updateUser(
     userId: string,
     input: UpdateUserInput,
-    actorIsSuperAdmin: boolean
+    actorRole?: string
   ): Promise<UserResponseDTO> {
     const existing = await this.getUserById(userId);
 
-    // 1. Safeguard: Prevent non-super admin from escalating themselves or others to SUPER_ADMIN
-    if (input.role === 'SUPER_ADMIN' && !actorIsSuperAdmin) {
-      throw new Error('Privilege escalation rejected: Only a Super Administrator can grant Super Admin status.');
+    // Hierarchy safeguard 1: Only a SUPER_ADMIN can promote a user to SUPER_ADMIN
+    if (input.role === 'SUPER_ADMIN' && existing.role !== 'SUPER_ADMIN' && actorRole !== 'SUPER_ADMIN') {
+      throw new Error('Access denied: Only a Super Administrator can promote a user to Super Administrator.');
     }
 
-    // 2. Safeguard: Prevent modifying the role of a Super Admin unless caller is Super Admin
-    if (existing.isSuperAdmin && !actorIsSuperAdmin && input.role && input.role !== 'SUPER_ADMIN') {
-      throw new Error('Access denied: You cannot alter the role of a Super Administrator.');
-    }
-
-    // 3. Safeguard: Prevent demoting the last active Super Admin
-    if (existing.isSuperAdmin && input.role && input.role !== 'SUPER_ADMIN') {
+    // Hierarchy safeguard 2: Prevent demoting the last active SUPER_ADMIN
+    if (existing.role === 'SUPER_ADMIN' && input.role && input.role !== 'SUPER_ADMIN') {
       const { count } = await supabaseAdmin
         .from('profiles')
-        .select('id', { count: 'exact' })
-        .eq('is_super_admin', true)
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'SUPER_ADMIN')
         .eq('status', 'ACTIVE')
         .neq('id', userId);
 
@@ -316,31 +240,38 @@ export class UsersService {
       }
     }
 
-    // 4. Update Supabase Auth email if changed
-    if (input.email && input.email.toLowerCase() !== existing.email.toLowerCase()) {
-      const newEmail = input.email.toLowerCase().trim();
-      if (hasServiceRoleKey) {
-        await supabaseAdmin.auth.admin.updateUserById(userId, {
-          email: newEmail,
-          email_confirm: true,
-        });
+    // Hierarchy safeguard 3: Prevent deactivating the last active SUPER_ADMIN
+    if (existing.role === 'SUPER_ADMIN' && input.status === 'INACTIVE') {
+      const { count } = await supabaseAdmin
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'SUPER_ADMIN')
+        .eq('status', 'ACTIVE')
+        .neq('id', userId);
+
+      if ((count ?? 0) < 1) {
+        throw new Error('Action rejected: Cannot deactivate the last active Super Administrator in the system.');
       }
     }
 
-    // 5. Update Profile
+    // Update Supabase Auth email if changed
+    if (input.email && input.email.toLowerCase() !== existing.email.toLowerCase()) {
+      this.ensureServiceRoleKey();
+      const newEmail = input.email.toLowerCase().trim();
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: newEmail,
+        email_confirm: true,
+      });
+    }
+
+    // Update Profile
     const profileUpdates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
     if (input.fullName !== undefined) profileUpdates.full_name = input.fullName.trim();
     if (input.email !== undefined) profileUpdates.email = input.email.toLowerCase().trim();
-    if (input.role !== undefined) {
-      profileUpdates.role = input.role;
-      profileUpdates.is_super_admin = input.role === 'SUPER_ADMIN';
-    }
+    if (input.role !== undefined) profileUpdates.role = input.role;
     if (input.status !== undefined) profileUpdates.status = input.status;
-    if (input.department !== undefined) profileUpdates.department = input.department;
-    if (input.designation !== undefined) profileUpdates.designation = input.designation;
-    if (input.employeeId !== undefined) profileUpdates.employee_id = input.employeeId;
     if (input.forcePasswordReset !== undefined) profileUpdates.force_password_reset = input.forcePasswordReset;
 
     const { error: updateError } = await supabaseAdmin
@@ -356,27 +287,25 @@ export class UsersService {
   }
 
   /**
-   * Deactivates a user account (preserves historical links and audit trails).
-   * Prevents deactivating the last active Super Admin.
+   * Deactivates a user account and terminates active sessions.
    */
   async deactivateUser(userId: string): Promise<UserResponseDTO> {
     const existing = await this.getUserById(userId);
 
-    // Safeguard: Protect last active Super Admin
-    if (existing.isSuperAdmin) {
+    // Safeguard: Cannot deactivate last active Super Admin
+    if (existing.role === 'SUPER_ADMIN') {
       const { count } = await supabaseAdmin
         .from('profiles')
-        .select('id', { count: 'exact' })
-        .eq('is_super_admin', true)
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'SUPER_ADMIN')
         .eq('status', 'ACTIVE')
         .neq('id', userId);
 
       if ((count ?? 0) < 1) {
-        throw new Error('Action rejected: Cannot deactivate the last active Super Administrator in the system.');
+        throw new Error('Action rejected: Cannot deactivate the last active Super Administrator.');
       }
     }
 
-    // Update status and revoke sessions
     const nowIso = new Date().toISOString();
     const { error } = await supabaseAdmin
       .from('profiles')
@@ -391,7 +320,7 @@ export class UsersService {
       throw new Error(`Failed to deactivate user: ${error.message}`);
     }
 
-    // Terminate active sessions in Supabase Auth if service role available
+    // Terminate active sessions in Supabase Auth if service role key available
     if (hasServiceRoleKey) {
       try {
         await supabaseAdmin.auth.admin.signOut(userId);
@@ -424,8 +353,31 @@ export class UsersService {
   }
 
   /**
-   * Resets a user's password securely through Supabase Auth.
-   * Never reveals or exposes existing or new password.
+   * Permanently deletes a user (Super Admin only).
+   */
+  async deleteUser(userId: string): Promise<{ deletedId: string }> {
+    this.ensureServiceRoleKey();
+    const existing = await this.getUserById(userId);
+
+    // Safeguard: Cannot delete a Super Admin account
+    if (existing.role === 'SUPER_ADMIN') {
+      throw new Error('Action rejected: Super Administrator accounts cannot be deleted.');
+    }
+
+    // Delete profile (cascades or explicit)
+    await supabaseAdmin.from('profiles').delete().eq('id', userId);
+
+    // Delete from Supabase Auth
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (authError) {
+      console.warn(`[Auth Delete Warning] Error removing auth identity:`, authError.message);
+    }
+
+    return { deletedId: userId };
+  }
+
+  /**
+   * Resets a user's password securely through Supabase Auth Admin API.
    */
   async resetPassword(
     userId: string,
@@ -436,18 +388,12 @@ export class UsersService {
     const existing = await this.getUserById(userId);
 
     if (newPassword && newPassword.length >= 8) {
-      // 1. Explicit admin password reset through authoritative Supabase Auth Admin API
-      if (!hasServiceRoleKey) {
-        throw new Error(
-          'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is required on the backend for administrative password updates.'
-        );
-      }
+      this.ensureServiceRoleKey();
       const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         password: newPassword,
       });
       if (error) throw new Error(`Password reset failed: ${error.message}`);
     } else {
-      // 2. Trigger secure reset email via Supabase Auth
       const { error } = await supabaseAdmin.auth.resetPasswordForEmail(existing.email);
       if (error) throw new Error(`Could not send password reset link: ${error.message}`);
     }
@@ -478,9 +424,9 @@ export class UsersService {
   }
 
   /**
-   * Revokes all active sessions for a target user.
+   * Revokes all active sessions for a user.
    */
-  async revokeSessions(userId: string): Promise<{ message: string }> {
+  async revokeSessions(userId: string, _reason?: string): Promise<{ message: string }> {
     const nowIso = new Date().toISOString();
 
     const { error } = await supabaseAdmin
@@ -492,18 +438,18 @@ export class UsersService {
       .eq('id', userId);
 
     if (error) {
-      throw new Error(`Failed to revoke sessions: ${error.message}`);
+      throw new Error(`Failed to revoke user sessions: ${error.message}`);
     }
 
     if (hasServiceRoleKey) {
       try {
         await supabaseAdmin.auth.admin.signOut(userId);
       } catch (err) {
-        console.warn(`[Supabase Auth signOut error]:`, err);
+        console.warn(`[Supabase Auth signOut] Could not terminate remote session:`, err);
       }
     }
 
-    return { message: 'All user sessions have been terminated successfully.' };
+    return { message: 'All user sessions have been terminated.' };
   }
 }
 

@@ -3,41 +3,28 @@ import { z } from 'zod';
 export const UserRoleSchema = z.enum([
   'SUPER_ADMIN',
   'ADMIN',
+  'ACCOUNT',
   'SUPERVISOR',
-  'ACCOUNTANT',
-  'STOREKEEPER',
-  'ATTENDANCE_USER',
-  'VIEWER',
 ]);
 
-export const UserStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']);
+export type UserRole = z.infer<typeof UserRoleSchema>;
+
+export const UserStatusSchema = z.enum(['ACTIVE', 'INACTIVE']);
+
+export type UserStatus = z.infer<typeof UserStatusSchema>;
 
 export const CreateUserSchema = z.object({
-  // Step 1: Basic Identity
   fullName: z
     .string()
     .trim()
     .min(2, 'Full name must be at least 2 characters')
     .max(100, 'Full name must not exceed 100 characters'),
-  username: z
-    .string()
-    .trim()
-    .min(3, 'Username must be at least 3 characters')
-    .max(64, 'Username must not exceed 64 characters')
-    .regex(/^[a-zA-Z0-9_.@-]+$/, 'Username can only contain alphanumeric characters, underscores, dashes, and @'),
   email: z
     .string()
     .trim()
     .email('Invalid email address')
     .max(150, 'Email must not exceed 150 characters'),
-  employeeId: z.string().uuid('Invalid Employee UUID format').optional().nullable(),
-
-  // Step 2: Organization
-  department: z.string().trim().max(100).optional().nullable(),
-  designation: z.string().trim().max(100).optional().nullable(),
-  role: UserRoleSchema,
-
-  // Step 3: Account & Security Settings
+  role: UserRoleSchema.default('SUPERVISOR'),
   initialPassword: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -52,9 +39,6 @@ export const UpdateUserSchema = z.object({
   fullName: z.string().trim().min(2).max(100).optional(),
   email: z.string().trim().email().max(150).optional(),
   role: UserRoleSchema.optional(),
-  department: z.string().trim().max(100).optional().nullable(),
-  designation: z.string().trim().max(100).optional().nullable(),
-  employeeId: z.string().uuid().optional().nullable(),
   status: UserStatusSchema.optional(),
   forcePasswordReset: z.boolean().optional(),
 });
@@ -65,7 +49,6 @@ export const ListUsersQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   role: z.string().trim().optional(),
   status: z.string().trim().optional(),
-  department: z.string().trim().optional(),
   sortBy: z
     .enum(['name', 'email', 'role', 'status', 'created_at', 'last_login_at'])
     .default('created_at'),

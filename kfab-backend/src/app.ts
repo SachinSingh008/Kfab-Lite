@@ -8,6 +8,9 @@ import { ENV, isProd, allowedOriginsList } from './config/env.js';
 import { usersRoutes } from './modules/users/users.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { rolesRoutes } from './modules/roles/roles.routes.js';
+import { auditRoutes } from './modules/audit/audit.routes.js';
+import { logsRoutes } from './modules/logs/logs.routes.js';
+import { systemLogsRoutes } from './modules/system-logs/system-logs.routes.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -113,6 +116,9 @@ export function buildApp(): FastifyInstance {
       v1.register(authRoutes, { prefix: '/auth' });
       v1.register(usersRoutes, { prefix: '/users' });
       v1.register(rolesRoutes);
+      v1.register(auditRoutes);
+      v1.register(logsRoutes, { prefix: '/logs' });
+      v1.register(systemLogsRoutes, { prefix: '/system-logs' });
     },
     { prefix: '/api/v1' }
   );

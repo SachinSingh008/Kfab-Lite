@@ -3,97 +3,42 @@ import { supabaseAdmin } from '../db/supabase.js';
 
 export type AppPermission =
   | 'users.view'
-  | 'users.manage'
   | 'users.create'
   | 'users.edit'
+  | 'users.delete'
+  | 'users.activate'
   | 'users.deactivate'
   | 'users.reset_password'
   | 'users.revoke_session'
   | 'users.assign_role'
-  | 'employees.view'
-  | 'employees.manage'
-  | 'attendance.view'
-  | 'attendance.mark'
-  | 'attendance.correct'
-  | 'stock.view'
-  | 'stock.inward'
-  | 'stock.outward'
-  | 'stock.usage'
-  | 'stock.void'
-  | 'reports.view'
-  | 'reports.export'
   | 'audit.view';
 
-// Role to default permissions catalog
+// Role to default permissions mapping
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
   SUPER_ADMIN: [
     'users.view',
-    'users.manage',
     'users.create',
     'users.edit',
+    'users.delete',
+    'users.activate',
     'users.deactivate',
     'users.reset_password',
     'users.revoke_session',
     'users.assign_role',
-    'employees.view',
-    'employees.manage',
-    'attendance.view',
-    'attendance.mark',
-    'attendance.correct',
-    'stock.view',
-    'stock.inward',
-    'stock.outward',
-    'stock.usage',
-    'stock.void',
-    'reports.view',
-    'reports.export',
     'audit.view',
   ],
   ADMIN: [
     'users.view',
-    'users.manage',
     'users.create',
     'users.edit',
+    'users.activate',
     'users.deactivate',
     'users.reset_password',
     'users.revoke_session',
-    'employees.view',
-    'employees.manage',
-    'attendance.view',
-    'attendance.mark',
-    'attendance.correct',
-    'stock.view',
-    'stock.inward',
-    'stock.outward',
-    'stock.usage',
-    'stock.void',
-    'reports.view',
-    'reports.export',
     'audit.view',
   ],
-  SUPERVISOR: [
-    'employees.view',
-    'attendance.view',
-    'attendance.mark',
-    'stock.view',
-    'stock.usage',
-  ],
-  ACCOUNTANT: [
-    'employees.view',
-    'attendance.view',
-    'stock.view',
-    'stock.inward',
-    'reports.view',
-    'reports.export',
-  ],
-  STOREKEEPER: [
-    'stock.view',
-    'stock.inward',
-    'stock.outward',
-    'stock.usage',
-    'stock.void',
-  ],
-  VIEWER: ['stock.view', 'attendance.view', 'reports.view'],
+  ACCOUNT: [],
+  SUPERVISOR: [],
 };
 
 /**
@@ -105,7 +50,7 @@ export async function userHasPermission(
   isSuperAdmin: boolean,
   requiredPermission: AppPermission
 ): Promise<boolean> {
-  // Super Admin implicitly holds all system permissions
+  // Super Admin implicitly holds all permissions
   if (isSuperAdmin || userRole === 'SUPER_ADMIN') {
     return true;
   }
@@ -120,9 +65,9 @@ export async function userHasPermission(
   try {
     const { data: dbPermissions } = await supabaseAdmin
       .from('role_permissions')
-      .select('permission')
+      .select('permission_code')
       .eq('role', userRole)
-      .eq('permission', requiredPermission)
+      .eq('permission_code', requiredPermission)
       .maybeSingle();
 
     if (dbPermissions) {
@@ -136,7 +81,7 @@ export async function userHasPermission(
 }
 
 /**
- * Middleware: Requires a specific permission string
+ * Middleware: Requires a specific permission
  */
 export function requirePermission(permission: AppPermission) {
   return async function (request: FastifyRequest, reply: FastifyReply) {
@@ -169,7 +114,7 @@ export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyR
     return reply.status(403).send({
       statusCode: 403,
       error: 'Forbidden',
-      message: 'Access restricted to system Super Administrators only.',
+      message: 'Access restricted to Super Administrators only.',
     });
   }
 }

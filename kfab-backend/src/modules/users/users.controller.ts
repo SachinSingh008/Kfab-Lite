@@ -59,7 +59,7 @@ export async function handleCreateUser(request: FastifyRequest, reply: FastifyRe
   }
 
   try {
-    const createdUser = await usersService.createUser(bodyResult.data, request.user?.id);
+    const createdUser = await usersService.createUser(bodyResult.data, request.user?.role);
 
     await logSecurityAction(request, {
       action: 'USER_CREATE',
@@ -69,7 +69,6 @@ export async function handleCreateUser(request: FastifyRequest, reply: FastifyRe
         id: createdUser.id,
         email: createdUser.email,
         role: createdUser.role,
-        department: createdUser.department,
         status: createdUser.status,
       },
     });
@@ -115,11 +114,10 @@ export async function handleUpdateUser(request: FastifyRequest, reply: FastifyRe
   }
 
   const targetId = paramResult.data.id;
-  const isSuper = Boolean(request.user?.isSuperAdmin);
 
   try {
     const original = await usersService.getUserById(targetId);
-    const updated = await usersService.updateUser(targetId, bodyResult.data, isSuper);
+    const updated = await usersService.updateUser(targetId, bodyResult.data, request.user?.role);
 
     await logSecurityAction(request, {
       action: 'USER_EDIT',
@@ -129,14 +127,12 @@ export async function handleUpdateUser(request: FastifyRequest, reply: FastifyRe
         fullName: original.fullName,
         email: original.email,
         role: original.role,
-        department: original.department,
         status: original.status,
       },
       newData: {
         fullName: updated.fullName,
         email: updated.email,
         role: updated.role,
-        department: updated.department,
         status: updated.status,
       },
     });
@@ -311,6 +307,42 @@ export async function handleRevokeSessions(request: FastifyRequest, reply: Fasti
       statusCode: 400,
       error: 'Bad Request',
       message: err instanceof Error ? err.message : 'Could not revoke sessions',
+    });
+  }
+}
+
+export async function handleDeleteUser(request: FastifyRequest, reply: FastifyReply) {
+  const paramResult = UserIdParamSchema.safeParse(request.params);
+  if (!paramResult.success) {
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Invalid User ID',
+    });
+  }
+
+  const targetId = paramResult.data.id;
+
+  try {
+    const result = await usersService.deleteUser(targetId);
+
+    await logSecurityAction(request, {
+      action: 'USER_DELETE',
+      targetUserId: targetId,
+      recordId: targetId,
+      reason: 'Permanently deleted by Super Administrator',
+    });
+
+    return reply.send({
+      statusCode: 200,
+      message: 'User account permanently removed.',
+      deletedId: result.deletedId,
+    });
+  } catch (err: unknown) {
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: err instanceof Error ? err.message : 'Could not delete user',
     });
   }
 }

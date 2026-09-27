@@ -5,10 +5,11 @@ import {
   CreateUserSchema,
   UpdateUserSchema,
   ListUsersQuerySchema,
+  UserRoleSchema,
 } from '../modules/users/users.schema.js';
 import { userHasPermission } from '../middleware/rbac.js';
 
-describe('KFab360 Enterprise Backend Security & RBAC Test Suite', () => {
+describe('KFab360 Authentication & User Management Security Test Suite', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -64,7 +65,6 @@ describe('KFab360 Enterprise Backend Security & RBAC Test Suite', () => {
         url: '/api/v1/users',
         payload: {
           fullName: 'Test User',
-          username: 'testuser',
           email: 'test@kfab.in',
           role: 'SUPERVISOR',
           initialPassword: 'Password123!',
@@ -72,16 +72,40 @@ describe('KFab360 Enterprise Backend Security & RBAC Test Suite', () => {
       });
       expect(response.statusCode).toBe(401);
     });
+
+    it('GET /api/v1/audit-logs without authentication returns 401', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/audit-logs',
+      });
+      expect(response.statusCode).toBe(401);
+    });
   });
 
-  describe('3. Zod Input Validation & SQL Injection Resistance', () => {
+  describe('3. Approved 4-Role Architecture Enforcement', () => {
+    it('Accepts only the 4 approved application roles', () => {
+      expect(UserRoleSchema.safeParse('SUPER_ADMIN').success).toBe(true);
+      expect(UserRoleSchema.safeParse('ADMIN').success).toBe(true);
+      expect(UserRoleSchema.safeParse('ACCOUNT').success).toBe(true);
+      expect(UserRoleSchema.safeParse('SUPERVISOR').success).toBe(true);
+    });
+
+    it('Rejects any legacy or foreign ERP roles', () => {
+      expect(UserRoleSchema.safeParse('ACCOUNTANT').success).toBe(false);
+      expect(UserRoleSchema.safeParse('STOREKEEPER').success).toBe(false);
+      expect(UserRoleSchema.safeParse('VIEWER').success).toBe(false);
+      expect(UserRoleSchema.safeParse('ATTENDANCE_USER').success).toBe(false);
+      expect(UserRoleSchema.safeParse('GUEST').success).toBe(false);
+    });
+  });
+
+  describe('4. Zod Input Validation & SQL Injection Resistance', () => {
     it('Rejects CreateUser with short password (< 8 chars)', () => {
       const result = CreateUserSchema.safeParse({
         fullName: 'John Doe',
-        username: 'johndoe',
         email: 'john@kfab.in',
         role: 'SUPERVISOR',
-        initialPassword: '123', // Too short
+        initialPassword: '123',
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -92,9 +116,8 @@ describe('KFab360 Enterprise Backend Security & RBAC Test Suite', () => {
     it('Rejects CreateUser with invalid email format', () => {
       const result = CreateUserSchema.safeParse({
         fullName: 'Jane Doe',
-        username: 'janedoe',
         email: 'not-an-email',
-        role: 'ACCOUNTANT',
+        role: 'ACCOUNT',
         initialPassword: 'SecurePassword123!',
       });
       expect(result.success).toBe(false);
@@ -124,67 +147,81 @@ describe('KFab360 Enterprise Backend Security & RBAC Test Suite', () => {
     it('Rejects negative or invalid pagination parameters', () => {
       const result = ListUsersQuerySchema.safeParse({
         page: '-5',
-        limit: '1000', // exceeds max 100
+        limit: '1000',
       });
       expect(result.success).toBe(false);
     });
   });
 
-  describe('4. RBAC Permission Matrix & Privilege Escalation Checks', () => {
+  describe('5. RBAC Permission Matrix & Role Hierarchy Checks', () => {
     it('SUPER_ADMIN holds all administrative permissions implicitly', async () => {
       const hasCreate = await userHasPermission('user-1', 'SUPER_ADMIN', true, 'users.create');
-      const hasDeactivate = await userHasPermission('user-1', 'SUPER_ADMIN', true, 'users.deactivate');
+      const hasDelete = await userHasPermission('user-1', 'SUPER_ADMIN', true, 'users.delete');
+      const hasAssignRole = await userHasPermission('user-1', 'SUPER_ADMIN', true, 'users.assign_role');
       const hasAudit = await userHasPermission('user-1', 'SUPER_ADMIN', true, 'audit.view');
 
       expect(hasCreate).toBe(true);
-      expect(hasDeactivate).toBe(true);
+      expect(hasDelete).toBe(true);
+      expect(hasAssignRole).toBe(true);
       expect(hasAudit).toBe(true);
     });
 
-    it('VIEWER cannot manage or create users', async () => {
-      const hasCreate = await userHasPermission('user-2', 'VIEWER', false, 'users.create');
-      const hasDeactivate = await userHasPermission('user-2', 'VIEWER', false, 'users.deactivate');
-      const hasEdit = await userHasPermission('user-2', 'VIEWER', false, 'users.edit');
+    it('ADMIN holds delegated user management permissions, but NOT users.delete or unrestricted role assignment', async () => {
+      const hasCreate = await userHasPermission('user-2', 'ADMIN', false, 'users.create');
+      const hasEdit = await userHasPermission('user-2', 'ADMIN', false, 'users.edit');
+      const hasDeactivate = await userHasPermission('user-2', 'ADMIN', false, 'users.deactivate');
+      const hasResetPass = await userHasPermission('user-2', 'ADMIN', false, 'users.reset_password');
+      const hasRevokeSession = await userHasPermission('user-2', 'ADMIN', false, 'users.revoke_session');
+      const hasDelete = await userHasPermission('user-2', 'ADMIN', false, 'users.delete');
+      const hasAssignRole = await userHasPermission('user-2', 'ADMIN', false, 'users.assign_role');
 
-      expect(hasCreate).toBe(false);
-      expect(hasDeactivate).toBe(false);
-      expect(hasEdit).toBe(false);
-    });
-
-    it('SUPERVISOR cannot manage users or alter settings', async () => {
-      const hasUserManage = await userHasPermission('user-3', 'SUPERVISOR', false, 'users.manage');
-      expect(hasUserManage).toBe(false);
-    });
-
-    it('ADMIN holds user management permissions within company scope', async () => {
-      const hasCreate = await userHasPermission('user-4', 'ADMIN', false, 'users.create');
-      const hasEdit = await userHasPermission('user-4', 'ADMIN', false, 'users.edit');
       expect(hasCreate).toBe(true);
       expect(hasEdit).toBe(true);
+      expect(hasDeactivate).toBe(true);
+      expect(hasResetPass).toBe(true);
+      expect(hasRevokeSession).toBe(true);
+      expect(hasDelete).toBe(false);
+      expect(hasAssignRole).toBe(false);
+    });
+
+    it('ACCOUNT has NO administrative or user-management permissions', async () => {
+      const hasCreate = await userHasPermission('user-3', 'ACCOUNT', false, 'users.create');
+      const hasView = await userHasPermission('user-3', 'ACCOUNT', false, 'users.view');
+      const hasAudit = await userHasPermission('user-3', 'ACCOUNT', false, 'audit.view');
+
+      expect(hasCreate).toBe(false);
+      expect(hasView).toBe(false);
+      expect(hasAudit).toBe(false);
+    });
+
+    it('SUPERVISOR has NO administrative or user-management permissions', async () => {
+      const hasCreate = await userHasPermission('user-4', 'SUPERVISOR', false, 'users.create');
+      const hasEdit = await userHasPermission('user-4', 'SUPERVISOR', false, 'users.edit');
+      const hasDeactivate = await userHasPermission('user-4', 'SUPERVISOR', false, 'users.deactivate');
+
+      expect(hasCreate).toBe(false);
+      expect(hasEdit).toBe(false);
+      expect(hasDeactivate).toBe(false);
     });
   });
 
-  describe('5. Data Exposure Protection (No Secret Leakage)', () => {
-    it('Schema DTO strictly omits passwords and tokens from returned user representation', () => {
-      const sampleResponse = {
+  describe('6. Data Exposure Protection (No Password or Secret Leakage)', () => {
+    it('User response strictly omits passwords and security secrets', () => {
+      const sampleUserResponse = {
         id: '11111111-1111-1111-1111-111111111111',
-        fullName: 'Test Admin',
-        email: 'admin@kfab.in',
-        username: 'admin@kfab.in',
-        role: 'ADMIN',
+        fullName: 'Sachin Singh',
+        email: 'sachinasinghofficial@gmail.com',
+        role: 'SUPER_ADMIN',
         status: 'ACTIVE',
-        department: 'Operations',
-        designation: 'Plant Admin',
-        employeeId: null,
         forcePasswordReset: false,
-        isSuperAdmin: false,
+        isSuperAdmin: true,
         lastLoginAt: null,
         sessionRevokedAt: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      const keys = Object.keys(sampleResponse);
+      const keys = Object.keys(sampleUserResponse);
       expect(keys).not.toContain('password');
       expect(keys).not.toContain('encrypted_password');
       expect(keys).not.toContain('secret');

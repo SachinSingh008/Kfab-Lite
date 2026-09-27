@@ -2,7 +2,7 @@
 // KFAB BASIC / KFAB360 — Authentication & User Management Store
 // ============================================================================
 
-export type AppRole = 'SUPER_ADMIN' | 'ADMIN' | 'SUPERVISOR' | 'ACCOUNTANT';
+export type AppRole = 'SUPER_ADMIN' | 'ADMIN' | 'SUPERVISOR' | 'ACCOUNT' | 'ACCOUNTANT';
 
 export interface AppUser {
   id: string;

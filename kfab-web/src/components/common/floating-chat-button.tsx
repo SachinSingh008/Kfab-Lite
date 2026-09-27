@@ -155,6 +155,7 @@ export function FloatingChatButton({
           glow: "shadow-[0_4px_20px_rgba(202,138,4,0.4)] ring-2 ring-yellow-400/40",
           badgeBg: "bg-slate-900 text-yellow-400",
         };
+      case "ACCOUNT":
       case "ACCOUNTANT":
         return {
           bg: "bg-[#15803D] hover:bg-[#166534]",
@@ -162,6 +163,14 @@ export function FloatingChatButton({
           border: "border-green-300",
           glow: "shadow-[0_4px_20px_rgba(21,128,61,0.4)] ring-2 ring-green-400/40",
           badgeBg: "bg-emerald-300 text-emerald-950",
+        };
+      default:
+        return {
+          bg: "bg-[#0F172A] hover:bg-[#1E293B]",
+          text: "text-white",
+          border: "border-slate-300",
+          glow: "shadow-[0_4px_20px_rgba(15,23,42,0.35)] ring-2 ring-slate-400/40",
+          badgeBg: "bg-slate-500",
         };
     }
   };

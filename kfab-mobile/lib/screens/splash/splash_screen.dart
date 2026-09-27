@@ -130,13 +130,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
           // 3. Centerpiece: Pure Logo & Prominent Senior-Designer Typography
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Top Spacer
-                  const SizedBox(height: 10),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Top Spacer
+                          const SizedBox(height: 10),
 
                   // Center Content
                   Column(
@@ -424,8 +429,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               ),
             ),
           ),
-        ],
+        ),
       ),
-    );
+    ),
+  ),
+],
+),
+);
   }
 }

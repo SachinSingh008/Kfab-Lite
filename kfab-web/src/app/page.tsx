@@ -30,6 +30,7 @@ import { EmployeesView } from "@/components/views/employees-view";
 import { ReportsView } from "@/components/views/reports-view";
 import { SettingsView } from "@/components/views/settings-view";
 import { ChatView } from "@/components/views/chat-view";
+import { LogsView } from "@/components/views/logs-view";
 
 // Supervisor Operations Views (from Kfab360)
 import { DailyReportsView } from "@/components/views/daily-reports-view";
@@ -44,6 +45,11 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
     title: "Executive Operations Dashboard",
     subtitle: "Real-time plant KPI indicators, fabrication throughput, and inventory telemetry.",
     category: "Operations",
+  },
+  logs: {
+    title: "Operational Activity & System Audit Logs",
+    subtitle: "User activity logs, consolidated team events, and automated application audit trails.",
+    category: "Audit & Logs",
   },
   chat: {
     title: "Team Channels & Secure Role-Scoped Messaging",
@@ -144,12 +150,29 @@ export default function KfabBasicApp() {
     if (session) {
       setCurrentUser(session);
     }
+    if (typeof window !== "undefined" && (window.location.pathname.startsWith("/logs") || window.location.search.includes("tab=logs"))) {
+      setCurrentTab("logs");
+    }
   }, []);
+
+  const handleSelectTab = (tab: NavTab) => {
+    setCurrentTab(tab);
+    if (typeof window !== "undefined") {
+      if (tab === "logs") {
+        window.history.pushState(null, "", "/logs");
+      } else {
+        window.history.pushState(null, "", "/");
+      }
+    }
+  };
 
   const handleLogout = () => {
     saveStoredSession(null);
     setCurrentUser(null);
     setCurrentTab("dashboard");
+    if (typeof window !== "undefined") {
+      window.history.pushState(null, "", "/");
+    }
   };
 
   // Initial splash screen animation (5 seconds progressive video)
@@ -182,7 +205,7 @@ export default function KfabBasicApp() {
       {/* 1. KFAB360 ENTERPRISE LIGHT SIDEBAR */}
       <Kfab360Sidebar
         currentTab={currentTab}
-        onSelectTab={(tab) => setCurrentTab(tab)}
+        onSelectTab={handleSelectTab}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -351,6 +374,10 @@ export default function KfabBasicApp() {
               supplyTransactions={transactions}
               onNavigateTab={(tab) => setCurrentTab(tab as NavTab)}
             />
+          )}
+
+          {currentTab === "logs" && (
+            <LogsView currentUser={currentUser} />
           )}
 
           {currentTab === "chat" && (

@@ -59,13 +59,13 @@ class _LoginScreenState extends State<LoginScreen> {
       assignedRole = UserRole.admin;
     } else if (_selectedRole == 'supervisor') {
       assignedRole = UserRole.supervisor;
-    } else if (_selectedRole == 'accountant') {
+    } else if (_selectedRole == 'accountant' || _selectedRole == 'account') {
       assignedRole = UserRole.accounts;
     } else {
       assignedRole = UserRole.superAdmin;
     }
 
-    widget.authState.login(
+    await widget.authState.login(
       email: username,
       password: password,
       role: assignedRole,
@@ -314,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(width: 4),
                             _buildRolePill('supervisor', 'Supervisor', 'supervisor', 'admin123', UserRole.supervisor),
                             const SizedBox(width: 4),
-                            _buildRolePill('accountant', 'Accountant', 'accountant', 'admin123', UserRole.accounts),
+                            _buildRolePill('account', 'Account', 'account', 'admin123', UserRole.accounts),
                           ],
                         ),
                       ),

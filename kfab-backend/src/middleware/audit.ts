@@ -54,15 +54,16 @@ function sanitizeAuditData(data: unknown): unknown {
 export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
   try {
     const payload = {
-      user_id: entry.actorUserId || null,
+      actor_id: entry.actorUserId || null,
       target_user_id: entry.targetUserId || null,
-      company_id: entry.companyId || null,
-      module: entry.module,
+      module: entry.module || 'USER_MANAGEMENT',
       action: entry.action,
-      record_id: entry.recordId || null,
-      old_data: entry.oldData ? (sanitizeAuditData(entry.oldData) as object) : null,
-      new_data: entry.newData ? (sanitizeAuditData(entry.newData) as object) : null,
-      reason: entry.reason || null,
+      resource_type: entry.module || 'USER_MANAGEMENT',
+      resource_id: entry.recordId || null,
+      description: entry.reason || `${entry.action} executed`,
+      old_values: entry.oldData ? (sanitizeAuditData(entry.oldData) as object) : null,
+      new_values: entry.newData ? (sanitizeAuditData(entry.newData) as object) : null,
+      details: entry.reason ? { reason: entry.reason } : null,
       ip_address: entry.ipAddress || null,
       user_agent: entry.userAgent || null,
       correlation_id: entry.correlationId || null,

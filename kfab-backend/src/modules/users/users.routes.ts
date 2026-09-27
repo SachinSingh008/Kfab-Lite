@@ -8,6 +8,7 @@ import {
   handleActivateUser,
   handleResetPassword,
   handleRevokeSessions,
+  handleDeleteUser,
 } from './users.controller.js';
 import { authenticate } from '../../middleware/auth.js';
 import { requirePermission } from '../../middleware/rbac.js';
@@ -16,7 +17,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
   // All user management routes require valid authentication
   fastify.addHook('preHandler', authenticate);
 
-  // 1. List users (search, filter, sort, paginate)
+  // 1. List users (search, filter by role/status, sort, paginate)
   fastify.get(
     '/',
     {
@@ -34,7 +35,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
     handleGetUserById
   );
 
-  // 3. Create user (multi-step workflow commit)
+  // 3. Create user (with hierarchy protection)
   fastify.post(
     '/',
     {
@@ -49,7 +50,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
     handleCreateUser
   );
 
-  // 4. Update user details & role assignment
+  // 4. Update user details & role
   fastify.put(
     '/:id',
     {
@@ -71,12 +72,21 @@ export async function usersRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/:id/activate',
     {
-      preHandler: [requirePermission('users.edit')],
+      preHandler: [requirePermission('users.activate')],
     },
     handleActivateUser
   );
 
-  // 7. Reset password override / email dispatch
+  // 7. Delete user account permanently (Super Admin only)
+  fastify.delete(
+    '/:id',
+    {
+      preHandler: [requirePermission('users.delete')],
+    },
+    handleDeleteUser
+  );
+
+  // 8. Reset password override / email dispatch
   fastify.post(
     '/:id/reset-password',
     {
@@ -91,7 +101,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
     handleResetPassword
   );
 
-  // 8. Revoke all user sessions
+  // 9. Revoke all user sessions
   fastify.post(
     '/:id/revoke-sessions',
     {

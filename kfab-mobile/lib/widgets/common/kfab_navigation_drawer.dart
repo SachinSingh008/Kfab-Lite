@@ -8,6 +8,7 @@ import '../../screens/stock/quick_usage_screen.dart';
 import '../../screens/challan/challan_capture_screen.dart';
 import '../../screens/scanner/qr_scanner_screen.dart';
 import '../../screens/sync/sync_queue_screen.dart';
+import '../../screens/logs/logs_screen.dart';
 
 class KfabNavigationDrawer extends StatelessWidget {
   final AuthState authState;
@@ -370,6 +371,26 @@ class KfabNavigationDrawer extends StatelessWidget {
                     onTap: () {
                       Navigator.pop(context);
                       onSelectTab(3);
+                    },
+                    rolePrimary: rolePrimary,
+                  ),
+
+                  // Logs Module (Placed immediately ABOVE Team Chat & Channels)
+                  _buildNavTile(
+                    context: context,
+                    icon: Icons.menu_book_outlined,
+                    activeIcon: Icons.menu_book,
+                    title: 'Logs',
+                    subtitle: 'Activity notes & system audit trail',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LogsScreen(authState: authState),
+                        ),
+                      );
                     },
                     rolePrimary: rolePrimary,
                   ),
