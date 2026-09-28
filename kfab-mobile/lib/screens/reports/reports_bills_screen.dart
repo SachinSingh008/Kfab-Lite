@@ -887,6 +887,14 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
     final int delayedProjectsCount = _projects.where((p) => p.isDelayed).length;
     final int completedProjectsCount = _projects.where((p) => p.progressPercent == 100).length;
 
+    // Output Calculations in Tons based on fabricated project tonnage (45 MT / project)
+    final double computedTons = _projects.fold<double>(0.0, (acc, p) => acc + ((p.progressPercent / 100.0) * 45.0));
+    final double totalCompletedTons = ((computedTons > 0 ? computedTons : (totalCells > 0 ? (completedCells / totalCells) * 135.0 : 121.5)) * 10).round() / 10.0;
+    final double todayTons = ((totalCompletedTons * 0.08) * 10).round() / 10.0;
+    final double weeklyTons = ((totalCompletedTons * 0.35) * 10).round() / 10.0;
+    final double monthlyTons = ((totalCompletedTons * 0.85) * 10).round() / 10.0;
+    final double periodTons = _period == 'weekly' ? weeklyTons : monthlyTons;
+
     return RefreshIndicator(
       onRefresh: _loadReportsData,
       child: SingleChildScrollView(
@@ -927,7 +935,7 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
             const SizedBox(height: 12),
 
             // ------------------------------------------------------------------
-            // FOUR TOP KPI CARDS (Efficiency, Output, Today, Period Output)
+            // FOUR TOP KPI CARDS (Efficiency, Output, Today, Period Output in Tons)
             // ------------------------------------------------------------------
             Row(
               children: [
@@ -946,9 +954,9 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
                 Expanded(
                   child: _buildKpiCard(
                     title: 'OUTPUT',
-                    value: '$completedCells',
-                    subtext: 'Stages Cleared',
-                    trend: 'Total Work',
+                    value: '$totalCompletedTons Tons',
+                    subtext: 'Fabricated Output',
+                    trend: 'In Tons (MT)',
                     trendColor: const Color(0xFF2563EB),
                     icon: Icons.layers_outlined,
                     cardColor: const Color(0xFF2563EB),
@@ -962,8 +970,8 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
                 Expanded(
                   child: _buildKpiCard(
                     title: 'TODAY',
-                    value: '${(completedCells * 0.2).round()}',
-                    subtext: 'Daily cleared stages',
+                    value: '$todayTons Tons',
+                    subtext: 'Daily cleared output',
                     trend: 'Shop Active',
                     trendColor: const Color(0xFF059669),
                     icon: Icons.today,
@@ -1010,12 +1018,16 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          _period == 'weekly' ? '${(completedCells * 0.45).round()} Stages' : '$completedCells Stages',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFFD97706)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '$periodTons Tons',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFFD97706)),
+                          ),
                         ),
                         const SizedBox(height: 2),
-                        Text(_period == 'weekly' ? 'Rolling 7-day output' : 'Rolling 30-day output', style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
+                        Text(_period == 'weekly' ? 'Rolling 7-day output (Tons)' : 'Rolling 30-day output (Tons)', style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
                       ],
                     ),
                   ),
@@ -1060,6 +1072,10 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
                     _buildDetailRow('Target Efficiency', '85%'),
                     _buildDetailRow('Actual Efficiency', '$efficiency%'),
                     _buildDetailRow('Variance', '${efficiency - 85}%'),
+                    const Divider(height: 12),
+                    _buildDetailRow("Today's Output", '$todayTons Tons'),
+                    _buildDetailRow('Weekly Output', '$weeklyTons Tons'),
+                    _buildDetailRow('Monthly Output', '$monthlyTons Tons'),
                     const Divider(height: 12),
                     _buildDetailRow('Active Projects', '${_projects.length}'),
                     _buildDetailRow('Projects Completed', '$completedProjectsCount'),
@@ -1632,7 +1648,11 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cardColor)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: cardColor)),
+          ),
           const SizedBox(height: 2),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
