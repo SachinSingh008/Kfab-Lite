@@ -11,7 +11,11 @@ export type AppPermission =
   | 'users.reset_password'
   | 'users.revoke_session'
   | 'users.assign_role'
-  | 'audit.view';
+  | 'audit.view'
+  | 'reports.view'
+  | 'projects.create'
+  | 'projects.edit'
+  | 'projects.delete';
 
 // Role to default permissions mapping
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
@@ -26,6 +30,10 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
     'users.revoke_session',
     'users.assign_role',
     'audit.view',
+    'reports.view',
+    'projects.create',
+    'projects.edit',
+    'projects.delete',
   ],
   ADMIN: [
     'users.view',
@@ -36,9 +44,15 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
     'users.reset_password',
     'users.revoke_session',
     'audit.view',
+    'reports.view',
+    'projects.create',
+    'projects.edit',
   ],
   ACCOUNT: [],
-  SUPERVISOR: [],
+  SUPERVISOR: [
+    'reports.view',
+    'projects.edit',
+  ],
 };
 
 /**

@@ -360,20 +360,37 @@ class KfabNavigationDrawer extends StatelessWidget {
                     rolePrimary: rolePrimary,
                   ),
 
-                  // Tab 3: Reports & Bills
-                  _buildNavTile(
-                    context: context,
-                    icon: Icons.description_outlined,
-                    activeIcon: Icons.description,
-                    title: 'Reports & Commercial Bills',
-                    subtitle: 'Muster rolls & ISO Excel audit sheets',
-                    isSelected: currentIndex == 3,
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelectTab(3);
-                    },
-                    rolePrimary: rolePrimary,
-                  ),
+                  // Tab 3: Reports (Available to SUPER_ADMIN, ADMIN, SUPERVISOR)
+                  if (role != UserRole.accounts)
+                    _buildNavTile(
+                      context: context,
+                      icon: Icons.bar_chart_outlined,
+                      activeIcon: Icons.bar_chart,
+                      title: 'Reports',
+                      subtitle: 'Efficiency, progress & stage tracking',
+                      isSelected: currentIndex == 3,
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSelectTab(3);
+                      },
+                      rolePrimary: rolePrimary,
+                    ),
+
+                  // Tab 3: Commercial Bills (Exclusive for ACCOUNT)
+                  if (role == UserRole.accounts)
+                    _buildNavTile(
+                      context: context,
+                      icon: Icons.receipt_long_outlined,
+                      activeIcon: Icons.receipt_long,
+                      title: 'Commercial Bills & POs',
+                      subtitle: 'Inward challans & 3-way reconciliation',
+                      isSelected: currentIndex == 3,
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSelectTab(3);
+                      },
+                      rolePrimary: rolePrimary,
+                    ),
 
                   // Logs Module (Placed immediately ABOVE Team Chat & Channels)
                   _buildNavTile(

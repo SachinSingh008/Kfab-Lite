@@ -92,7 +92,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     const dbClient = hasServiceRoleKey ? supabaseAdmin : createUserClient(token);
     const { data: profile, error: profileError } = await dbClient
       .from('profiles')
-      .select('id, full_name, email, role, status, is_super_admin, session_revoked_at')
+      .select('id, full_name, email, role, status, session_revoked_at')
       .eq('id', userId)
       .maybeSingle();
 
@@ -105,7 +105,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
       });
     }
 
-    const isSuperAdmin = profile?.is_super_admin ?? false;
+    const isSuperAdmin = profile?.role === 'SUPER_ADMIN';
     const status = profile?.status ?? 'ACTIVE';
 
     // 3. Verify Account Status

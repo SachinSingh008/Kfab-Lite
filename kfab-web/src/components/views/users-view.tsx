@@ -45,8 +45,22 @@ import {
   AuditLogDTO,
   ROLE_DEFAULT_PERMISSIONS,
 } from "@/lib/api-client";
+import { AppUser, getStoredSession } from "@/lib/auth-store";
 
-export function UsersView() {
+interface UsersViewProps {
+  currentUser?: AppUser | null;
+}
+
+export function UsersView({ currentUser: propUser }: UsersViewProps = {}) {
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(propUser || null);
+
+  useEffect(() => {
+    if (propUser) {
+      setCurrentUser(propUser);
+    } else {
+      setCurrentUser(getStoredSession());
+    }
+  }, [propUser]);
   // ============================================================================
   // State: List & Filters
   // ============================================================================
@@ -723,18 +737,27 @@ export function UsersView() {
                           <LogOut className="size-3.5" />
                         </button>
 
-                        {/* Activate / Deactivate Toggle (Protected for last super admin) */}
-                        <button
-                          onClick={() => setStatusToggleUser(u)}
-                          title={u.status === "ACTIVE" ? "Deactivate user" : "Activate user"}
-                          className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                            u.status === "ACTIVE"
-                              ? "text-slate-600 hover:text-rose-600 hover:bg-rose-50"
-                              : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
-                          }`}
-                        >
-                          {u.status === "ACTIVE" ? <UserX className="size-3.5" /> : <UserCheck className="size-3.5" />}
-                        </button>
+                        {/* Activate / Deactivate Toggle (Protected for last super admin and own account) */}
+                        {currentUser?.id === u.id || (currentUser?.username && u.email && currentUser.username.toLowerCase() === u.email.toLowerCase()) ? (
+                          <span
+                            title="You cannot deactivate your own account"
+                            className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
+                          >
+                            <UserX className="size-3.5" />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setStatusToggleUser(u)}
+                            title={u.status === "ACTIVE" ? "Deactivate user" : "Activate user"}
+                            className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                              u.status === "ACTIVE"
+                                ? "text-slate-600 hover:text-rose-600 hover:bg-rose-50"
+                                : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
+                            }`}
+                          >
+                            {u.status === "ACTIVE" ? <UserX className="size-3.5" /> : <UserCheck className="size-3.5" />}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

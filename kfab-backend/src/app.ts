@@ -11,6 +11,9 @@ import { rolesRoutes } from './modules/roles/roles.routes.js';
 import { auditRoutes } from './modules/audit/audit.routes.js';
 import { logsRoutes } from './modules/logs/logs.routes.js';
 import { systemLogsRoutes } from './modules/system-logs/system-logs.routes.js';
+import { projectsRoutes } from './modules/projects/projects.routes.js';
+import { reportsRoutes } from './modules/reports/reports.routes.js';
+import { supabaseAdmin } from './db/supabase.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -32,6 +35,21 @@ export function buildApp(): FastifyInstance {
     },
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'reqId',
+  });
+
+  // Support empty JSON bodies gracefully without throwing FST_ERR_CTP_EMPTY_JSON_BODY
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || (typeof body === 'string' && body.trim() === '')) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Invalid JSON');
+      (error as FastifyError).statusCode = 400;
+      done(error as FastifyError, undefined);
+    }
   });
 
   // 1. Correlation ID Hook
@@ -119,6 +137,23 @@ export function buildApp(): FastifyInstance {
       v1.register(auditRoutes);
       v1.register(logsRoutes, { prefix: '/logs' });
       v1.register(systemLogsRoutes, { prefix: '/system-logs' });
+      v1.register(projectsRoutes, { prefix: '/projects' });
+      v1.register(reportsRoutes, { prefix: '/reports' });
+
+      // Fallback/Stub for employees directory
+      v1.get('/employees', async (_request, reply) => {
+        try {
+          const { data, error } = await supabaseAdmin
+            .from('employees')
+            .select('id, employee_code, name, department, designation, status');
+          if (!error && data) {
+            return reply.send({ statusCode: 200, employees: data });
+          }
+        } catch {
+          // ignore error if table does not exist
+        }
+        return reply.send({ statusCode: 200, employees: [] });
+      });
     },
     { prefix: '/api/v1' }
   );

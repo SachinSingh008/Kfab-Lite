@@ -118,15 +118,14 @@ export async function authenticateUser(usernameInput: string, passwordInput: str
         // Query user profile from Supabase profiles table
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, email, role, status, is_super_admin')
+          .select('full_name, email, role, status')
           .eq('id', data.user.id)
           .maybeSingle();
 
-        const isSuper = profile?.is_super_admin ?? false;
         let role: AppRole = 'SUPERVISOR';
-        if (isSuper) {
+        if (profile?.role === 'SUPER_ADMIN') {
           role = 'SUPER_ADMIN';
-        } else if (profile?.role === 'ADMIN' || profile?.role === 'SUPER_ADMIN' || profile?.role === 'SUPERVISOR' || profile?.role === 'ACCOUNTANT') {
+        } else if (profile?.role === 'ADMIN' || profile?.role === 'SUPERVISOR' || profile?.role === 'ACCOUNTANT') {
           role = profile.role;
         }
 
@@ -281,7 +280,7 @@ export async function syncUsersFromSupabase(): Promise<AppUser[]> {
       email: string | null;
       role?: string | null;
       status?: string | null;
-      is_super_admin: boolean;
+      is_super_admin?: boolean;
       created_at: string;
     }> | null = null;
 
@@ -293,7 +292,7 @@ export async function syncUsersFromSupabase(): Promise<AppUser[]> {
       // 2. Fallback to direct profiles table query
       const { data: tableData, error: tableError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, status, is_super_admin, created_at');
+        .select('id, full_name, email, role, status, created_at');
       if (!tableError && tableData && tableData.length > 0) {
         fetchedProfiles = tableData;
       }
@@ -312,9 +311,9 @@ export async function syncUsersFromSupabase(): Promise<AppUser[]> {
       );
 
       let computedRole: AppRole = 'SUPERVISOR';
-      if (p.is_super_admin) {
+      if (p.role === 'SUPER_ADMIN' || p.is_super_admin) {
         computedRole = 'SUPER_ADMIN';
-      } else if (p.role === 'ADMIN' || p.role === 'SUPER_ADMIN' || p.role === 'SUPERVISOR' || p.role === 'ACCOUNTANT') {
+      } else if (p.role === 'ADMIN' || p.role === 'SUPERVISOR' || p.role === 'ACCOUNTANT') {
         computedRole = p.role;
       } else if (existing?.role) {
         computedRole = existing.role;
@@ -421,7 +420,6 @@ export async function updateUserRecord(
           email: targetEmail,
           role: updatedUser.role,
           status: updatedUser.status,
-          is_super_admin: updatedUser.role === 'SUPER_ADMIN',
           updated_at: new Date().toISOString(),
         }).eq('id', id);
       }

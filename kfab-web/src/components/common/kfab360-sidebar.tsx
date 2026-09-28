@@ -29,6 +29,7 @@ import {
   Landmark,
   MessageSquare,
   FileText,
+  BarChart3,
 } from "lucide-react";
 import { AppUser } from "@/lib/auth-store";
 
@@ -49,6 +50,8 @@ export type NavTab =
   | "accounts"
   | "employees"
   | "reports"
+  | "reports-progress"
+  | "reports-details"
   | "users"
   | "settings";
 
@@ -68,7 +71,7 @@ export function Kfab360Sidebar({
   const isSuperAdmin = currentUser.role === "SUPER_ADMIN";
   const isAdmin = currentUser.role === "ADMIN";
   const isSupervisor = currentUser.role === "SUPERVISOR";
-  const isAccountant = currentUser.role === "ACCOUNTANT";
+  const isAccountant = currentUser.role === "ACCOUNTANT" || currentUser.role === "ACCOUNT";
 
   // Shrinkable/collapsible full sidebar state
   const [isShrunk, setIsShrunk] = useState(false);
@@ -76,10 +79,9 @@ export function Kfab360Sidebar({
   // Collapsible section categories state
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     executive: false,
-    operations: false,
+    reports: false,
     commercial: isSupervisor ? true : false,
     people: isSupervisor ? true : false,
-    reports: isSupervisor ? true : false,
     security: isSupervisor || isAccountant ? true : false,
   });
 
@@ -215,108 +217,69 @@ export function Kfab360Sidebar({
         </div>
 
         {/* ============================================================ */}
-        {/* Projects & Operations Section (THE SUPERVISOR WORKSPACE) */}
+        {/* Reports Section (2 Sub-topics: Tab 1 & Tab 2) */}
         {/* ============================================================ */}
-        <div>
-          {!isShrunk ? (
-            <button
-              type="button"
-              onClick={() => toggleSection("operations")}
-              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-              style={{ color: "var(--role-sidebar-section-title)" }}
-            >
-              <div className="flex items-center gap-1.5">
-                <HardHat className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                <span>Projects & Operations</span>
-              </div>
-              <span
-                className="size-4 rounded flex items-center justify-center border transition-colors"
-                style={{
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  borderColor: "var(--role-sidebar-border)",
-                  color: "var(--role-sidebar-fg)",
-                }}
+        {!isAccountant && (
+          <div>
+            {!isShrunk ? (
+              <button
+                type="button"
+                onClick={() => toggleSection("reports")}
+                className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
+                style={{ color: "var(--role-sidebar-section-title)" }}
               >
-                {collapsedSections.operations ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <Minus className="size-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <div
-              className="h-2 border-b mb-1"
-              style={{ borderColor: "var(--role-sidebar-border)" }}
-            />
-          )}
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
+                  <span>Reports</span>
+                </div>
+                <span
+                  className="size-4 rounded flex items-center justify-center border transition-colors"
+                  style={{
+                    backgroundColor: "var(--role-sidebar-subtle)",
+                    borderColor: "var(--role-sidebar-border)",
+                    color: "var(--role-sidebar-fg)",
+                  }}
+                >
+                  {collapsedSections.reports ? (
+                    <ChevronRight className="size-3" />
+                  ) : (
+                    <Minus className="size-3" />
+                  )}
+                </span>
+              </button>
+            ) : (
+              <div
+                className="h-2 border-b mb-1"
+                style={{ borderColor: "var(--role-sidebar-border)" }}
+              />
+            )}
 
-          {/* Sub topics with One Tab Space Indentation */}
-          {!collapsedSections.operations && (
-            <div
-              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-              style={{ borderColor: "var(--role-sidebar-subtle)" }}
-            >
-              <SidebarNavItem
-                active={currentTab === "daily-reports"}
-                onClick={() => onSelectTab("daily-reports")}
-                icon={FileCheck}
-                label="Daily Reports (DPR)"
-                badge={isSupervisor ? "Primary" : undefined}
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "production"}
-                onClick={() => onSelectTab("production")}
-                icon={Activity}
-                label="Bay Production & Tonnage"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "attendance"}
-                onClick={() => onSelectTab("attendance")}
-                icon={CalendarCheck}
-                label="Worker Muster & Shifts"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "stock"}
-                onClick={() => onSelectTab("stock")}
-                icon={Boxes}
-                label="Stores & Raw Steel Stock"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "machines"}
-                onClick={() => onSelectTab("machines")}
-                icon={Wrench}
-                label="Machinery & Cranes"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "qaqc"}
-                onClick={() => onSelectTab("qaqc")}
-                icon={ShieldCheck}
-                label="QA/QC & Weld Inspections"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "issues"}
-                onClick={() => onSelectTab("issues")}
-                icon={AlertTriangle}
-                label="Shop Floor Issues"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "requirements"}
-                onClick={() => onSelectTab("requirements")}
-                icon={Package}
-                label="Material Requisitions"
-                isShrunk={isShrunk}
-              />
-            </div>
-          )}
-        </div>
+            {/* 2 Sub topics with One Tab Space Indentation for Tab 1 and Tab 2 */}
+            {!collapsedSections.reports && (
+              <div
+                className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
+                style={{ borderColor: "var(--role-sidebar-subtle)" }}
+              >
+                <SidebarNavItem
+                  active={currentTab === "reports-progress" || currentTab === "reports"}
+                  onClick={() => onSelectTab("reports-progress")}
+                  icon={Activity}
+                  label="Project Progress"
+                  badge="Tab 1"
+                  isShrunk={isShrunk}
+                />
+                <SidebarNavItem
+                  active={currentTab === "reports-details"}
+                  onClick={() => onSelectTab("reports-details")}
+                  icon={Layers}
+                  label="Project Details"
+                  badge="Tab 2"
+                  isShrunk={isShrunk}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ============================================================ */}
         {/* Accounts & Commercial Section (THE ACCOUNTANT WORKSPACE) */}
@@ -440,18 +403,7 @@ export function Kfab360Sidebar({
           )}
         </div>
 
-        {/* ============================================================ */}
-        {/* Reports Section */}
-        {/* ============================================================ */}
-        <div>
-          <SidebarNavItem
-            active={currentTab === "reports"}
-            onClick={() => onSelectTab("reports")}
-            icon={FileSpreadsheet}
-            label="Enterprise Reports & Excel"
-            isShrunk={isShrunk}
-          />
-        </div>
+
 
         {/* ============================================================ */}
         {/* Configuration & Security Section */}

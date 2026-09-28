@@ -11,7 +11,7 @@ export interface DbProfile {
   full_name: string;
   phone: string | null;
   avatar_url: string | null;
-  is_super_admin: boolean;
+  is_super_admin?: boolean;
   created_at: string;
   updated_at: string;
 }

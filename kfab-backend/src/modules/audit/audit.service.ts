@@ -153,7 +153,33 @@ export class AuditService {
 
       const { error } = await supabaseAdmin.from('audit_logs').insert(record);
       if (error) {
-        console.error('[AuditService] Failed to insert audit log:', error);
+        // If extended columns from migration 005 are not yet applied to remote DB, fallback to base schema with details JSONB
+        if (error.code === 'PGRST204') {
+          const fallbackRecord = {
+            actor_id: params.actorId || null,
+            action: params.action,
+            target_user_id: params.targetUserId || null,
+            details: {
+              ...(sanitizedDetails || {}),
+              module: params.module || 'SYSTEM',
+              resource_type: params.resourceType || null,
+              resource_id: params.resourceId ? String(params.resourceId) : null,
+              description: params.description || null,
+              old_values: sanitizedOld,
+              new_values: sanitizedNew,
+            },
+            ip_address: ip || null,
+            user_agent: ua || null,
+            correlation_id: corrId || null,
+            status: params.status || 'SUCCESS',
+          };
+          const { error: fallbackError } = await supabaseAdmin.from('audit_logs').insert(fallbackRecord);
+          if (fallbackError) {
+            console.error('[AuditService] Failed to insert audit log with base schema:', fallbackError);
+          }
+        } else {
+          console.error('[AuditService] Failed to insert audit log:', error);
+        }
       }
     } catch (err) {
       console.error('[AuditService] Exception while recording audit log:', err);

@@ -122,9 +122,19 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
     category: "Workforce",
   },
   reports: {
-    title: "Enterprise Reports Hub & Excel Data Center",
-    subtitle: "Executive summaries, consumption analytics, vendor metrics, and ISO audit spreadsheets.",
-    category: "Analytics",
+    title: "Reports & Project Progress Dashboard",
+    subtitle: "Plant efficiency, delivery schedule tracking, and dynamic stage execution.",
+    category: "Reports",
+  },
+  "reports-progress": {
+    title: "Project Progress Dashboard (Tab 1)",
+    subtitle: "Real-time delivery milestones, planned vs. actual progress curves, and delay tracking.",
+    category: "Reports",
+  },
+  "reports-details": {
+    title: "Project Details & Stage Execution (Tab 2)",
+    subtitle: "Normalized material item tracking across marking, cutting, fitting, welding, and final stages.",
+    category: "Reports",
   },
   settings: {
     title: "Plant Configuration & System Settings",
@@ -150,8 +160,12 @@ export default function KfabBasicApp() {
     if (session) {
       setCurrentUser(session);
     }
-    if (typeof window !== "undefined" && (window.location.pathname.startsWith("/logs") || window.location.search.includes("tab=logs"))) {
-      setCurrentTab("logs");
+    if (typeof window !== "undefined") {
+      if (window.location.pathname.startsWith("/logs") || window.location.search.includes("tab=logs")) {
+        setCurrentTab("logs");
+      } else if (window.location.pathname.startsWith("/reports") || window.location.search.includes("tab=reports")) {
+        setCurrentTab("reports");
+      }
     }
   }, []);
 
@@ -160,6 +174,8 @@ export default function KfabBasicApp() {
     if (typeof window !== "undefined") {
       if (tab === "logs") {
         window.history.pushState(null, "", "/logs");
+      } else if (tab === "reports" || tab === "reports-progress" || tab === "reports-details") {
+        window.history.pushState(null, "", "/reports");
       } else {
         window.history.pushState(null, "", "/");
       }
@@ -410,7 +426,7 @@ export default function KfabBasicApp() {
           )}
 
           {currentTab === "users" && (
-            <UsersView />
+            <UsersView currentUser={currentUser} />
           )}
 
           {currentTab === "attendance" && (
@@ -455,9 +471,10 @@ export default function KfabBasicApp() {
             />
           )}
 
-          {currentTab === "reports" && (
+          {(currentTab === "reports" || currentTab === "reports-progress" || currentTab === "reports-details") && (
             <ReportsView
               currentUser={currentUser}
+              initialTab={currentTab === "reports-details" ? "details" : "progress"}
             />
           )}
 

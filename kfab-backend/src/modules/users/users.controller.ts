@@ -21,7 +21,7 @@ export async function handleListUsers(request: FastifyRequest, reply: FastifyRep
     });
   }
 
-  const result = await usersService.listUsers(queryResult.data);
+  const result = await usersService.listUsers(queryResult.data, request.user?.token);
   return reply.send(result);
 }
 
@@ -36,7 +36,7 @@ export async function handleGetUserById(request: FastifyRequest, reply: FastifyR
   }
 
   try {
-    const user = await usersService.getUserById(paramResult.data.id);
+    const user = await usersService.getUserById(paramResult.data.id, request.user?.token);
     return reply.send({ user });
   } catch (err: unknown) {
     return reply.status(404).send({
@@ -162,6 +162,15 @@ export async function handleDeactivateUser(request: FastifyRequest, reply: Fasti
   }
 
   const targetId = paramResult.data.id;
+
+  // Security guardrail: Cannot deactivate own account
+  if (request.user?.id === targetId) {
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Action rejected: You cannot deactivate your own account.',
+    });
+  }
 
   try {
     const updated = await usersService.deactivateUser(targetId);
@@ -322,6 +331,15 @@ export async function handleDeleteUser(request: FastifyRequest, reply: FastifyRe
   }
 
   const targetId = paramResult.data.id;
+
+  // Security guardrail: Cannot delete own account
+  if (request.user?.id === targetId) {
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Action rejected: You cannot delete your own account.',
+    });
+  }
 
   try {
     const result = await usersService.deleteUser(targetId);
