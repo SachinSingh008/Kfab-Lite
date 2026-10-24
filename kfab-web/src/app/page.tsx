@@ -299,76 +299,14 @@ export default function KfabBasicApp() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Executive Header Bar */}
         <header
-          className="h-16 px-6 flex items-center justify-between shadow-kfab z-10 shrink-0 border-b transition-colors"
+          className="h-14 px-6 flex items-center justify-end shadow-xs z-10 shrink-0 border-b transition-colors gap-3"
           style={{
             backgroundColor: "var(--role-navbar-bg)",
             color: "var(--role-navbar-fg)",
             borderColor: "var(--role-navbar-border)",
           }}
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border"
-                  style={{
-                    backgroundColor: "var(--role-div-heading-category-bg)",
-                    color: "var(--role-div-heading-category-fg)",
-                    borderColor: "var(--role-div-heading-border)",
-                  }}
-                >
-                  {tabMeta.category}
-                </span>
-                <span className="opacity-40">/</span>
-                <h2
-                  className="text-sm md:text-base font-extrabold tracking-tight truncate"
-                  style={{ color: "var(--role-navbar-fg)" }}
-                >
-                  {tabMeta.title}
-                </h2>
-              </div>
-            </div>
-
-            <div className="hidden lg:flex items-center gap-2 pl-3 border-l" style={{ borderColor: "var(--role-navbar-border)" }}>
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border"
-                style={{
-                  backgroundColor: "var(--role-navbar-badge-bg)",
-                  color: "var(--role-navbar-badge-fg)",
-                  borderColor: "var(--role-navbar-border)",
-                }}
-              >
-                <span className="size-2 rounded-full bg-[#16A34A] animate-pulse" />
-                Jejuri MIDC &bull; Shift A Active
-              </span>
-            </div>
-          </div>
-
           <div className="flex items-center gap-3">
-            {/* Easily Removable Sample Demo Data Mode Toggle Button */}
-            <button
-              onClick={handleToggleSampleData}
-              title={
-                sampleDataActive
-                  ? "Click to remove all sample demo records across all tabs"
-                  : "Click to load sample demonstration data across all tabs"
-              }
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border shadow-xs cursor-pointer ${
-                sampleDataActive
-                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25"
-                  : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
-              }`}
-            >
-              <Sparkles className={`size-3.5 ${sampleDataActive ? "text-amber-500 fill-amber-500 animate-pulse" : "text-slate-400"}`} />
-              <span>{sampleDataActive ? "Demo Data: Active" : "Clean Slate: Empty"}</span>
-              <span
-                className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
-                  sampleDataActive ? "bg-amber-500 text-white" : "bg-slate-300 text-slate-700"
-                }`}
-              >
-                {sampleDataActive ? "Remove" : "Load"}
-              </span>
-            </button>
 
             {/* Dynamic Role Badge */}
             <div

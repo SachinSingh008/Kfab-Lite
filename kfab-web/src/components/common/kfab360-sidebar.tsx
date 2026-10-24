@@ -96,17 +96,14 @@ export function Kfab360Sidebar({
   // Shrinkable/collapsible full sidebar state
   const [isShrunk, setIsShrunk] = useState(false);
 
-  // Antigravity Explorer Collapsible Folders State
+  // Antigravity Explorer Collapsible Folders State (only for categories with multiple children)
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
-    dashboard: true,
     inventory: true,
     reports: true,
     accounts: true,
     people: true,
     workbooks: true,
     security: true,
-    logs: true,
-    chat: true,
   });
 
   const toggleFolder = (folderKey: string) => {
@@ -118,29 +115,23 @@ export function Kfab360Sidebar({
 
   const collapseAllFolders = () => {
     setOpenFolders({
-      dashboard: false,
       inventory: false,
       reports: false,
       accounts: false,
       people: false,
       workbooks: false,
       security: false,
-      logs: false,
-      chat: false,
     });
   };
 
   const expandAllFolders = () => {
     setOpenFolders({
-      dashboard: true,
       inventory: true,
       reports: true,
       accounts: true,
       people: true,
       workbooks: true,
       security: true,
-      logs: true,
-      chat: true,
     });
   };
 
@@ -317,43 +308,27 @@ export function Kfab360Sidebar({
       {/* 2. Navigation Explorer Tree */}
       <nav className="flex-1 p-2 space-y-1.5 overflow-y-auto">
         {/* ============================================================ */}
-        {/* 1. DASHBOARD — USER ROLE SPECIFIC */}
+        {/* 1. DASHBOARD — USER ROLE SPECIFIC (Single Item, no folder) */}
         {/* ============================================================ */}
-        <TreeFolder
-          label="Dashboard"
-          badge={currentUser.role.replace("_", " ")}
-          isOpen={openFolders.dashboard}
-          onToggle={() => toggleFolder("dashboard")}
-          isShrunk={isShrunk}
+        <RootFileItem
+          active={currentTab === "dashboard"}
+          onClick={() => onSelectTab("dashboard")}
           icon={LayoutDashboard}
-        >
-          <TreeFileItem
-            active={currentTab === "dashboard"}
-            onClick={() => onSelectTab("dashboard")}
-            icon={LayoutDashboard}
-            label={getRoleDashboardLabel()}
-            isShrunk={isShrunk}
-          />
-        </TreeFolder>
+          label={getRoleDashboardLabel()}
+          badge={currentUser.role.replace("_", " ")}
+          isShrunk={isShrunk}
+        />
 
         {/* ============================================================ */}
-        {/* 2. LOGS — AS IT IS */}
+        {/* 2. LOGS — AS IT IS (Single Item, no folder) */}
         {/* ============================================================ */}
-        <TreeFolder
-          label="Logs"
-          isOpen={openFolders.logs}
-          onToggle={() => toggleFolder("logs")}
-          isShrunk={isShrunk}
+        <RootFileItem
+          active={currentTab === "logs"}
+          onClick={() => onSelectTab("logs")}
           icon={FileText}
-        >
-          <TreeFileItem
-            active={currentTab === "logs"}
-            onClick={() => onSelectTab("logs")}
-            icon={FileText}
-            label="Operational Activity Logs"
-            isShrunk={isShrunk}
-          />
-        </TreeFolder>
+          label="Operational Activity Logs"
+          isShrunk={isShrunk}
+        />
 
         {/* ============================================================ */}
         {/* 3. INVENTORY — FOR ALL */}
@@ -555,24 +530,16 @@ export function Kfab360Sidebar({
         )}
 
         {/* ============================================================ */}
-        {/* TEAM CHAT — QUICK WORKSPACE COMMUNICATIONS */}
+        {/* TEAM CHAT — SINGLE ITEM (No folder) */}
         {/* ============================================================ */}
-        <TreeFolder
-          label="Team Chat"
-          isOpen={openFolders.chat}
-          onToggle={() => toggleFolder("chat")}
-          isShrunk={isShrunk}
+        <RootFileItem
+          active={currentTab === "chat"}
+          onClick={() => onSelectTab("chat")}
           icon={MessageSquare}
-        >
-          <TreeFileItem
-            active={currentTab === "chat"}
-            onClick={() => onSelectTab("chat")}
-            icon={MessageSquare}
-            label="Team Channels & Chat"
-            badge="Live"
-            isShrunk={isShrunk}
-          />
-        </TreeFolder>
+          label="Team Channels & Chat"
+          badge="Live"
+          isShrunk={isShrunk}
+        />
       </nav>
 
       {/* 3. User Profile & Logout Footer */}
@@ -772,6 +739,89 @@ function TreeFileItem({
           }`}
         />
         {!isShrunk && <span className="truncate text-[11.5px]">{label}</span>}
+      </div>
+
+      {!isShrunk && badge && (
+        <span
+          className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0"
+          style={
+            active
+              ? {
+                  backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  color: "inherit",
+                }
+              : {
+                  backgroundColor: "var(--role-sidebar-subtle)",
+                  color: "var(--role-sidebar-fg)",
+                  border: "1px solid var(--role-sidebar-border)",
+                }
+          }
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ============================================================================
+// TOP-LEVEL SINGLE ITEM COMPONENT (For categories with only 1 child: Dashboard, Logs, Chat)
+// ============================================================================
+
+interface RootFileItemProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  badge?: string;
+  isShrunk?: boolean;
+}
+
+function RootFileItem({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  badge,
+  isShrunk = false,
+}: RootFileItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      title={isShrunk ? label : undefined}
+      className={`relative w-full flex items-center ${
+        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-2 rounded-lg"
+      } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group mb-1 ${
+        active
+          ? "font-bold shadow-xs"
+          : "font-semibold hover:bg-[var(--role-sidebar-item-hover-bg)]"
+      }`}
+      style={
+        active
+          ? {
+              backgroundColor: "var(--role-sidebar-item-active-bg)",
+              color: "var(--role-sidebar-item-active-fg)",
+            }
+          : {
+              color: "var(--role-sidebar-fg)",
+            }
+      }
+    >
+      {/* Role-themed Accent Indicator Bar on Left Edge */}
+      {active && (
+        <span
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-4.5 rounded-r-full"
+          style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
+        />
+      )}
+
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Icon
+          className={`size-4 shrink-0 transition-opacity ${
+            active ? "opacity-100" : "opacity-75 group-hover:opacity-100"
+          }`}
+        />
+        {!isShrunk && <span className="truncate text-xs">{label}</span>}
       </div>
 
       {!isShrunk && badge && (
