@@ -15,6 +15,29 @@ export async function POST(
       );
     }
 
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('id, role')
+      .eq('id', id)
+      .maybeSingle();
+
+    const callerRole = request.headers.get('x-caller-role') || '';
+    const callerId = request.headers.get('x-caller-id') || '';
+
+    if (callerRole === 'ADMIN') {
+      const isSupervisorOrAcc =
+        targetProfile?.role === 'SUPERVISOR' ||
+        targetProfile?.role === 'ACCOUNTANT' ||
+        targetProfile?.role === 'ACCOUNT';
+
+      if (!isSupervisorOrAcc || (callerId && callerId === id)) {
+        return NextResponse.json(
+          { statusCode: 403, message: 'Permission denied: Admins can only activate supervisors and accountants.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const { data: updated, error } = await admin
       .from('profiles')
       .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })

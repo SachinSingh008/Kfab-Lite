@@ -190,6 +190,44 @@ export async function DELETE(
       );
     }
 
+    // Protect Super Admin from deletion
+    if (id === '6060b3df-fec0-4772-8d3a-d32d3efd97d5') {
+      return NextResponse.json(
+        { statusCode: 403, message: 'Action rejected: Primary Super Administrator account cannot be deleted.' },
+        { status: 403 }
+      );
+    }
+
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('id, role')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (targetProfile?.role === 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { statusCode: 403, message: 'Action rejected: Super Administrator accounts cannot be deleted.' },
+        { status: 403 }
+      );
+    }
+
+    const callerRole = request.headers.get('x-caller-role') || '';
+    const callerId = request.headers.get('x-caller-id') || '';
+
+    if (callerRole === 'ADMIN') {
+      const isSupervisorOrAcc =
+        targetProfile?.role === 'SUPERVISOR' ||
+        targetProfile?.role === 'ACCOUNTANT' ||
+        targetProfile?.role === 'ACCOUNT';
+
+      if (!isSupervisorOrAcc || (callerId && callerId === id)) {
+        return NextResponse.json(
+          { statusCode: 403, message: 'Permission denied: Admins can only delete supervisors and accountants.' },
+          { status: 403 }
+        );
+      }
+    }
+
     // 1. Delete from profiles
     await admin.from('profiles').delete().eq('id', id);
 

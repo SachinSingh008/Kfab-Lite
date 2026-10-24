@@ -15,6 +15,43 @@ export async function POST(
       );
     }
 
+    if (id === '6060b3df-fec0-4772-8d3a-d32d3efd97d5') {
+      return NextResponse.json(
+        { statusCode: 403, message: 'Primary Super Administrator account cannot be deactivated.' },
+        { status: 403 }
+      );
+    }
+
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('id, role')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (targetProfile?.role === 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { statusCode: 403, message: 'Super Administrator accounts cannot be deactivated.' },
+        { status: 403 }
+      );
+    }
+
+    const callerRole = request.headers.get('x-caller-role') || '';
+    const callerId = request.headers.get('x-caller-id') || '';
+
+    if (callerRole === 'ADMIN') {
+      const isSupervisorOrAcc =
+        targetProfile?.role === 'SUPERVISOR' ||
+        targetProfile?.role === 'ACCOUNTANT' ||
+        targetProfile?.role === 'ACCOUNT';
+
+      if (!isSupervisorOrAcc || (callerId && callerId === id)) {
+        return NextResponse.json(
+          { statusCode: 403, message: 'Permission denied: Admins can only deactivate supervisors and accountants.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const { data: updated, error } = await admin
       .from('profiles')
       .update({ status: 'INACTIVE', updated_at: new Date().toISOString() })

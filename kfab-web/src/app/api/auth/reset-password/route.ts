@@ -38,18 +38,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Enforce role permission:
-    // Admin can edit password of himself, all supervisors, and all accountants. Cannot edit other admins or super admin.
+    // Query target profile
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('id, role, email')
+      .or(`id.eq.${targetAuthId},id.eq.${targetIdentifier}`)
+      .maybeSingle();
+
+    const isTargetSuperAdmin =
+      targetProfile?.role === 'SUPER_ADMIN' ||
+      targetAuthId === '6060b3df-fec0-4772-8d3a-d32d3efd97d5' ||
+      targetProfile?.email?.toLowerCase() === 'sachinasinghofficial@gmail.com' ||
+      userCheck?.user?.email?.toLowerCase() === 'sachinasinghofficial@gmail.com';
+
+    // 1. NO ONE CAN CHANGE SUPERADMIN PASSWORD
+    if (isTargetSuperAdmin) {
+      return NextResponse.json(
+        { statusCode: 403, message: 'Security restriction: Super Admin password is strictly protected and cannot be changed.' },
+        { status: 403 }
+      );
+    }
+
+    // 2. Enforce Admin role permission:
+    // Admin can edit password of himself, all supervisors, and all accountants only.
     const callerRole = request.headers.get('x-caller-role') || body.callerRole || '';
     const callerId = request.headers.get('x-caller-id') || body.callerId || '';
 
     if (callerRole === 'ADMIN') {
-      const { data: targetProfile } = await admin
-        .from('profiles')
-        .select('id, role')
-        .or(`id.eq.${targetAuthId},id.eq.${targetIdentifier}`)
-        .maybeSingle();
-
       if (targetProfile) {
         const isSelf = callerId && (callerId === targetProfile.id);
         const isSupervisorOrAcc =

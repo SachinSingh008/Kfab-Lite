@@ -80,26 +80,78 @@ export function UserTable({
     currentUser?.id === u.id ||
     (currentUser?.username && u.email && currentUser.username.toLowerCase() === u.email.toLowerCase());
 
-  const isProtectedAdmin = (u: ApiUserDTO) =>
+  const isSuperAdminUser = (u: ApiUserDTO) =>
     u.role === "SUPER_ADMIN" ||
+    u.isSuperAdmin ||
     u.id === "6060b3df-fec0-4772-8d3a-d32d3efd97d5" ||
-    u.email.toLowerCase() === "sachinasinghofficial@gmail.com";
+    u.email?.toLowerCase() === "sachinasinghofficial@gmail.com";
 
-  // Permission Rule:
-  // - Super Admin can edit details & password for ALL users.
-  // - Admin can edit himself, all supervisors, and all accountants.
-  // - Admin CANNOT edit any other admin or super admin.
-  const canManageUser = (u: ApiUserDTO) => {
+  const isSupervisorOrAccountant = (u: ApiUserDTO) =>
+    u.role === "SUPERVISOR" ||
+    u.role === "ACCOUNTANT";
+
+  // Permission Rules:
+  // 1. Password Reset:
+  //    - NO ONE can change superadmin password (button removed for superadmin).
+  //    - Admin can change password of accounts, supervisor, and himself only.
+  //    - Superadmin can change password of all other users.
+  const canResetPassword = (u: ApiUserDTO) => {
+    if (isSuperAdminUser(u)) return false; // No one can change superadmin password
     if (!currentUser) return false;
     if (currentUser.role === "SUPER_ADMIN") return true;
-
     if (currentUser.role === "ADMIN") {
-      if (isSelf(u)) return true;
-      if (u.role === "SUPERVISOR" || u.role === "ACCOUNTANT") return true;
-      return false;
+      return isSelf(u) || isSupervisorOrAccountant(u);
     }
+    return false;
+  };
 
+  // 2. Edit User:
+  //    - Superadmin can edit all.
+  //    - Admin can edit himself, all supervisors, and all accountants only (not superadmin or other admins).
+  const canEditUser = (u: ApiUserDTO) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "SUPER_ADMIN") return true;
+    if (currentUser.role === "ADMIN") {
+      return isSelf(u) || isSupervisorOrAccountant(u);
+    }
     return isSelf(u);
+  };
+
+  // 3. Revoke Sessions:
+  const canRevokeSessions = (u: ApiUserDTO) => {
+    if (!currentUser) return false;
+    if (isSuperAdminUser(u)) {
+      return currentUser.role === "SUPER_ADMIN";
+    }
+    if (currentUser.role === "SUPER_ADMIN") return true;
+    if (currentUser.role === "ADMIN") {
+      return isSelf(u) || isSupervisorOrAccountant(u);
+    }
+    return false;
+  };
+
+  // 4. Inactivate / Activate (Status Toggle):
+  const canToggleStatus = (u: ApiUserDTO) => {
+    if (!currentUser) return false;
+    if (isSelf(u)) return false; // Cannot inactivate self
+    if (isSuperAdminUser(u)) return false; // Superadmin cannot be inactivated
+    if (currentUser.role === "SUPER_ADMIN") return true;
+    if (currentUser.role === "ADMIN") {
+      return isSupervisorOrAccountant(u);
+    }
+    return false;
+  };
+
+  // 5. Delete User:
+  const canDeleteUser = (u: ApiUserDTO) => {
+    if (!currentUser) return false;
+    if (isSelf(u)) return false; // Cannot delete self
+    if (isSuperAdminUser(u)) return false; // Superadmin cannot be deleted
+    if (currentUser.role === "SUPER_ADMIN") return true;
+    if (currentUser.role === "ADMIN") {
+      return isSupervisorOrAccountant(u);
+    }
+    return false;
   };
 
   return (
@@ -235,7 +287,7 @@ export function UserTable({
                       </button>
 
                       {/* Edit User */}
-                      {canManageUser(u) ? (
+                      {canEditUser(u) && (
                         <button
                           onClick={() => onOpenEdit(u)}
                           title="Edit user details & role assignment"
@@ -243,17 +295,10 @@ export function UserTable({
                         >
                           <Edit2 className="size-3.5" />
                         </button>
-                      ) : (
-                        <span
-                          title="Admins cannot edit other Admin or Super Admin accounts"
-                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
-                        >
-                          <Edit2 className="size-3.5" />
-                        </span>
                       )}
 
                       {/* Reset Password */}
-                      {canManageUser(u) ? (
+                      {canResetPassword(u) && (
                         <button
                           onClick={() => onOpenPasswordReset(u)}
                           title="Administrative password reset override"
@@ -261,17 +306,10 @@ export function UserTable({
                         >
                           <KeyRound className="size-3.5" />
                         </button>
-                      ) : (
-                        <span
-                          title="Admins cannot reset password of other Admin or Super Admin accounts"
-                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
-                        >
-                          <KeyRound className="size-3.5" />
-                        </span>
                       )}
 
                       {/* Revoke Sessions */}
-                      {canManageUser(u) ? (
+                      {canRevokeSessions(u) && (
                         <button
                           onClick={() => onOpenRevokeSessions(u)}
                           title="Revoke active sessions"
@@ -279,30 +317,10 @@ export function UserTable({
                         >
                           <LogOut className="size-3.5" />
                         </button>
-                      ) : (
-                        <span
-                          title="Admins cannot revoke sessions of other Admin or Super Admin accounts"
-                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
-                        >
-                          <LogOut className="size-3.5" />
-                        </span>
                       )}
 
                       {/* Activate / Deactivate Toggle */}
-                      {isSelf(u) || isProtectedAdmin(u) || !canManageUser(u) ? (
-                        <span
-                          title={
-                            isSelf(u)
-                              ? "Cannot deactivate your own account"
-                              : !canManageUser(u)
-                              ? "Admins cannot change status of other Admin or Super Admin accounts"
-                              : "Super Admin cannot be deactivated"
-                          }
-                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
-                        >
-                          <UserX className="size-3.5" />
-                        </span>
-                      ) : (
+                      {canToggleStatus(u) && (
                         <button
                           onClick={() => onOpenStatusToggle(u)}
                           title={u.status === "ACTIVE" ? "Deactivate user" : "Activate user"}
@@ -317,20 +335,7 @@ export function UserTable({
                       )}
 
                       {/* DELETE USER ACTION */}
-                      {isSelf(u) || isProtectedAdmin(u) || !canManageUser(u) ? (
-                        <span
-                          title={
-                            isSelf(u)
-                              ? "Cannot delete your own account"
-                              : !canManageUser(u)
-                              ? "Admins cannot delete other Admin or Super Admin accounts"
-                              : "Primary Super Administrator cannot be deleted"
-                          }
-                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </span>
-                      ) : (
+                      {canDeleteUser(u) && (
                         <button
                           onClick={() => onOpenDelete(u)}
                           title="Permanently delete user from database"
