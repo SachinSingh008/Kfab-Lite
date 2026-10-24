@@ -285,6 +285,40 @@ export default function KfabBasicApp() {
 
   const tabMeta = TAB_TITLES[currentTab] || TAB_TITLES.dashboard;
 
+  const TAB_DISPLAY_NAMES: Record<NavTab, string> = {
+    dashboard:
+      currentUser.role === "SUPER_ADMIN"
+        ? "Executive Operations Dashboard"
+        : currentUser.role === "ADMIN"
+        ? "Plant Administration Dashboard"
+        : currentUser.role === "SUPERVISOR"
+        ? "Fabrication & Bay Operations"
+        : "Financial & Accounts Ledger",
+    logs: "Operational Activity Logs",
+    chat: "Team Channels & Chat",
+    inventory: "Inventory Master",
+    stock: "Raw Material Stock",
+    "inventory-workbook": "Inventory Spreadsheet",
+    "daily-reports": "Daily Shift Reports (DPR)",
+    production: "Fabrication Bay Production",
+    machines: "Plant Machinery",
+    qaqc: "Quality Control (QA/QC)",
+    issues: "Issues & Bottlenecks",
+    requirements: "Material Requisitions",
+    users: "User Management & RBAC",
+    attendance: "Attendance Roster",
+    ledger: "Atomic Stock Ledger",
+    supplies: "Inward Goods & Challans",
+    accounts: "Accounts & 3-Way Match",
+    employees: "Personnel Directory",
+    reports: "Project Progress",
+    "reports-progress": "Project Progress",
+    "reports-details": "Project Details",
+    settings: "Plant Configuration",
+  };
+
+  const activeTabName = TAB_DISPLAY_NAMES[currentTab] || "Dashboard";
+
   return (
     <div data-role-theme={currentUser.role} className="flex h-screen w-full overflow-hidden bg-[#F8FAFC]">
       {/* 1. KFAB360 ENTERPRISE LIGHT SIDEBAR */}
@@ -299,13 +333,23 @@ export default function KfabBasicApp() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Executive Header Bar */}
         <header
-          className="h-14 px-6 flex items-center justify-end shadow-xs z-10 shrink-0 border-b transition-colors gap-3"
+          className="h-14 px-6 flex items-center justify-between shadow-xs z-10 shrink-0 border-b transition-colors gap-3"
           style={{
             backgroundColor: "var(--role-navbar-bg)",
             color: "var(--role-navbar-fg)",
             borderColor: "var(--role-navbar-border)",
           }}
         >
+          {/* Active Open Tab Title on Left */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <h1
+              className="text-base md:text-lg font-black tracking-tight truncate"
+              style={{ color: "var(--role-navbar-fg)" }}
+            >
+              {activeTabName}
+            </h1>
+          </div>
+
           <div className="flex items-center gap-3">
 
             {/* Dynamic Role Badge */}
