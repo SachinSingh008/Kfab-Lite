@@ -30,6 +30,8 @@ import {
   BarChart3,
   HardHat,
   FileCode2,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { AppUser } from "@/lib/auth-store";
 
@@ -113,6 +115,36 @@ export function Kfab360Sidebar({
       [folderKey]: !prev[folderKey],
     }));
   };
+
+  const collapseAllFolders = () => {
+    setOpenFolders({
+      dashboard: false,
+      inventory: false,
+      reports: false,
+      accounts: false,
+      people: false,
+      workbooks: false,
+      security: false,
+      logs: false,
+      chat: false,
+    });
+  };
+
+  const expandAllFolders = () => {
+    setOpenFolders({
+      dashboard: true,
+      inventory: true,
+      reports: true,
+      accounts: true,
+      people: true,
+      workbooks: true,
+      security: true,
+      logs: true,
+      chat: true,
+    });
+  };
+
+  const areAnyOpen = Object.values(openFolders).some(Boolean);
 
   // Ensure current user cannot stay stuck on an unauthorized tab
   useEffect(() => {
@@ -241,20 +273,44 @@ export function Kfab360Sidebar({
         )}
       </div>
 
-      {/* Explorer Section Title (Antigravity IDE style) */}
+      {/* Explorer Section Title (Antigravity IDE style) with Collapse All Minus Option */}
       {!isShrunk && (
         <div
-          className="px-3.5 py-2 border-b flex items-center justify-between text-[10px] font-extrabold uppercase tracking-widest opacity-80"
+          className="px-3.5 py-2 border-b flex items-center justify-between text-[10px] font-extrabold uppercase tracking-widest"
           style={{
             borderColor: "var(--role-sidebar-border)",
             color: "var(--role-sidebar-section-title)",
           }}
         >
-          <div className="flex items-center gap-1.5">
-            <FileCode2 className="size-3.5" />
-            <span>Workspace Explorer</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <FileCode2 className="size-3.5 opacity-80" />
+            <span className="truncate">Workspace Explorer</span>
           </div>
-          <span className="text-[9px] lowercase font-mono opacity-70">v6.4</span>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Minus Option to Minimize All Files/Folders */}
+            <button
+              type="button"
+              onClick={collapseAllFolders}
+              title="Minimize All Folders & Files (Collapse All)"
+              className="p-1 rounded hover:bg-[var(--role-sidebar-item-hover-bg)] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer flex items-center gap-1 group"
+            >
+              <Minus className="size-3.5 stroke-[2.5] group-hover:scale-110 transition-transform" />
+              <span className="text-[9px] lowercase font-semibold opacity-80">minimize all</span>
+            </button>
+
+            {/* Expand Option when everything is minimized */}
+            {!areAnyOpen && (
+              <button
+                type="button"
+                onClick={expandAllFolders}
+                title="Expand All Folders"
+                className="p-1 rounded hover:bg-[var(--role-sidebar-item-hover-bg)] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+              >
+                <Plus className="size-3.5 stroke-[2.5]" />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
