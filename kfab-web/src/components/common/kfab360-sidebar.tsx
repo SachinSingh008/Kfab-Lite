@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -17,19 +17,19 @@ import {
   Building2,
   Layers,
   ChevronRight,
-  Minus,
+  ChevronDown,
+  Folder,
+  FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
-  FileCheck,
   Activity,
-  Wrench,
-  AlertTriangle,
   Package,
-  HardHat,
   Landmark,
   MessageSquare,
   FileText,
   BarChart3,
+  HardHat,
+  FileCode2,
 } from "lucide-react";
 import { AppUser } from "@/lib/auth-store";
 
@@ -75,31 +75,79 @@ export function Kfab360Sidebar({
   const isSupervisor = currentUser.role === "SUPERVISOR";
   const isAccountant = currentUser.role === "ACCOUNTANT" || currentUser.role === "ACCOUNT";
 
+  // Role visibility permissions:
+  // - Dashboard: user role specific (all)
+  // - Logs: as it is (all)
+  // - Inventory: for all
+  const canSeeInventory = true;
+  // - Reports: for supervisor admin and superadmin
+  const canSeeReports = isSupervisor || isAdmin || isSuperAdmin;
+  // - Accounts: for acc admin and superadmin
+  const canSeeAccounts = isAccountant || isAdmin || isSuperAdmin;
+  // - People and hr: for acc admin and superadmin
+  const canSeePeople = isAccountant || isAdmin || isSuperAdmin;
+  // - Workbook: visible for acc admin and superadmin
+  const canSeeWorkbooks = isAccountant || isAdmin || isSuperAdmin;
+  // - Admin and security: visible for admin and superadmin
+  const canSeeSecurity = isAdmin || isSuperAdmin;
+
   // Shrinkable/collapsible full sidebar state
   const [isShrunk, setIsShrunk] = useState(false);
 
-  // Collapsible section categories state
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    executive: false,
-    inventory: false,
-    reports: false,
-    commercial: isSupervisor ? true : false,
-    people: isSupervisor ? true : false,
-    files: false,
-    security: isSupervisor || isAccountant ? true : false,
+  // Antigravity Explorer Collapsible Folders State
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
+    dashboard: true,
+    inventory: true,
+    reports: true,
+    accounts: true,
+    people: true,
+    workbooks: true,
+    security: true,
+    logs: true,
+    chat: true,
   });
 
-  const toggleSection = (section: string) => {
-    setCollapsedSections((prev) => ({
+  const toggleFolder = (folderKey: string) => {
+    setOpenFolders((prev) => ({
       ...prev,
-      [section]: !prev[section],
+      [folderKey]: !prev[folderKey],
     }));
+  };
+
+  // Ensure current user cannot stay stuck on an unauthorized tab
+  useEffect(() => {
+    if (
+      ["reports", "reports-progress", "reports-details", "daily-reports", "production"].includes(
+        currentTab
+      ) &&
+      !canSeeReports
+    ) {
+      onSelectTab("dashboard");
+    } else if (
+      ["accounts", "ledger", "supplies"].includes(currentTab) &&
+      !canSeeAccounts
+    ) {
+      onSelectTab("dashboard");
+    } else if (["employees"].includes(currentTab) && !canSeePeople) {
+      onSelectTab("dashboard");
+    } else if (["users", "settings"].includes(currentTab) && !canSeeSecurity) {
+      onSelectTab("dashboard");
+    }
+  }, [currentUser.role, currentTab, canSeeReports, canSeeAccounts, canSeePeople, canSeeSecurity, onSelectTab]);
+
+  // Role-specific dashboard name
+  const getRoleDashboardLabel = () => {
+    if (isSuperAdmin) return "Executive Operations";
+    if (isAdmin) return "Plant Administration";
+    if (isSupervisor) return "Fabrication & Bay Operations";
+    if (isAccountant) return "Financial & Accounts Ledger";
+    return "Operations Overview";
   };
 
   return (
     <aside
       className={`flex-shrink-0 flex flex-col border-r shadow-kfab z-20 select-none transition-all duration-300 ease-in-out ${
-        isShrunk ? "w-[72px]" : "w-68"
+        isShrunk ? "w-[72px]" : "w-72"
       }`}
       style={{
         backgroundColor: "var(--role-sidebar-bg)",
@@ -107,14 +155,17 @@ export function Kfab360Sidebar({
         borderColor: "var(--role-sidebar-border)",
       }}
     >
-      {/* 1. Brand & Organization Header */}
+      {/* 1. Brand & Plant Header */}
       <div
         className="p-3.5 border-b"
         style={{ borderColor: "var(--role-sidebar-border)" }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="shrink-0 size-9 rounded-full bg-white flex items-center justify-center p-1 shadow-xs border" style={{ borderColor: "var(--role-sidebar-border)" }}>
+            <div
+              className="shrink-0 size-9 rounded-full bg-white flex items-center justify-center p-1 shadow-xs border"
+              style={{ borderColor: "var(--role-sidebar-border)" }}
+            >
               <Image
                 src="/logo.png"
                 alt="KFAB360 Logo"
@@ -128,7 +179,7 @@ export function Kfab360Sidebar({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h1
-                    className="text-[17px] font-black tracking-tight"
+                    className="text-[16px] font-black tracking-tight"
                     style={{ color: "var(--role-sidebar-fg)" }}
                   >
                     KFAB<span style={{ color: "var(--role-accent)" }}>360</span>
@@ -145,7 +196,7 @@ export function Kfab360Sidebar({
                   </span>
                 </div>
                 <p
-                  className="text-[11px] font-semibold truncate opacity-85"
+                  className="text-[10px] font-semibold truncate opacity-85"
                   style={{ color: "var(--role-sidebar-section-title)" }}
                 >
                   Heavy Steel Fabrication ERP
@@ -190,435 +241,282 @@ export function Kfab360Sidebar({
         )}
       </div>
 
-      {/* 2. Navigation Menu */}
-      <nav className="flex-1 p-2.5 space-y-3 overflow-y-auto">
+      {/* Explorer Section Title (Antigravity IDE style) */}
+      {!isShrunk && (
+        <div
+          className="px-3.5 py-2 border-b flex items-center justify-between text-[10px] font-extrabold uppercase tracking-widest opacity-80"
+          style={{
+            borderColor: "var(--role-sidebar-border)",
+            color: "var(--role-sidebar-section-title)",
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <FileCode2 className="size-3.5" />
+            <span>Workspace Explorer</span>
+          </div>
+          <span className="text-[9px] lowercase font-mono opacity-70">v6.4</span>
+        </div>
+      )}
+
+      {/* 2. Navigation Explorer Tree */}
+      <nav className="flex-1 p-2 space-y-1.5 overflow-y-auto">
         {/* ============================================================ */}
-        {/* Executive Section */}
+        {/* 1. DASHBOARD — USER ROLE SPECIFIC */}
         {/* ============================================================ */}
-        <div>
-          <SidebarNavItem
+        <TreeFolder
+          label="Dashboard"
+          badge={currentUser.role.replace("_", " ")}
+          isOpen={openFolders.dashboard}
+          onToggle={() => toggleFolder("dashboard")}
+          isShrunk={isShrunk}
+          icon={LayoutDashboard}
+        >
+          <TreeFileItem
             active={currentTab === "dashboard"}
             onClick={() => onSelectTab("dashboard")}
             icon={LayoutDashboard}
-            label="Executive Dashboard"
+            label={getRoleDashboardLabel()}
             isShrunk={isShrunk}
           />
-          <SidebarNavItem
+        </TreeFolder>
+
+        {/* ============================================================ */}
+        {/* 2. LOGS — AS IT IS */}
+        {/* ============================================================ */}
+        <TreeFolder
+          label="Logs"
+          isOpen={openFolders.logs}
+          onToggle={() => toggleFolder("logs")}
+          isShrunk={isShrunk}
+          icon={FileText}
+        >
+          <TreeFileItem
             active={currentTab === "logs"}
             onClick={() => onSelectTab("logs")}
             icon={FileText}
-            label="Logs"
+            label="Operational Activity Logs"
             isShrunk={isShrunk}
           />
-          <SidebarNavItem
+        </TreeFolder>
+
+        {/* ============================================================ */}
+        {/* 3. INVENTORY — FOR ALL */}
+        {/* ============================================================ */}
+        {canSeeInventory && (
+          <TreeFolder
+            label="Inventory"
+            badge="For All"
+            isOpen={openFolders.inventory}
+            onToggle={() => toggleFolder("inventory")}
+            isShrunk={isShrunk}
+            icon={Boxes}
+          >
+            <TreeFileItem
+              active={currentTab === "inventory"}
+              onClick={() => onSelectTab("inventory")}
+              icon={Boxes}
+              label="Inventory Master"
+              badge="Store"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "stock"}
+              onClick={() => onSelectTab("stock")}
+              icon={Package}
+              label="Raw Material Stock"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* 4. REPORTS — FOR SUPERVISOR, ADMIN AND SUPERADMIN */}
+        {/* ============================================================ */}
+        {canSeeReports && (
+          <TreeFolder
+            label="Reports"
+            isOpen={openFolders.reports}
+            onToggle={() => toggleFolder("reports")}
+            isShrunk={isShrunk}
+            icon={BarChart3}
+          >
+            <TreeFileItem
+              active={currentTab === "reports-progress" || currentTab === "reports"}
+              onClick={() => onSelectTab("reports-progress")}
+              icon={Activity}
+              label="Project Progress"
+              badge="Tab 1"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "reports-details"}
+              onClick={() => onSelectTab("reports-details")}
+              icon={Layers}
+              label="Project Details"
+              badge="Tab 2"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "daily-reports"}
+              onClick={() => onSelectTab("daily-reports")}
+              icon={HardHat}
+              label="Daily Shift Reports (DPR)"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "production"}
+              onClick={() => onSelectTab("production")}
+              icon={Layers}
+              label="Fabrication Production"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* 5. ACCOUNTS — FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* ============================================================ */}
+        {canSeeAccounts && (
+          <TreeFolder
+            label="Accounts"
+            isOpen={openFolders.accounts}
+            onToggle={() => toggleFolder("accounts")}
+            isShrunk={isShrunk}
+            icon={Landmark}
+          >
+            <TreeFileItem
+              active={currentTab === "accounts"}
+              onClick={() => onSelectTab("accounts")}
+              icon={DollarSign}
+              label="Accounts & 3-Way Match"
+              badge={isAccountant ? "Priority" : undefined}
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "ledger"}
+              onClick={() => onSelectTab("ledger")}
+              icon={BookOpen}
+              label="Atomic Stock Ledger"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "supplies"}
+              onClick={() => onSelectTab("supplies")}
+              icon={Truck}
+              label="Inward Goods & Challans"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* 6. PEOPLE AND HR — FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* ============================================================ */}
+        {canSeePeople && (
+          <TreeFolder
+            label="People & HR"
+            isOpen={openFolders.people}
+            onToggle={() => toggleFolder("people")}
+            isShrunk={isShrunk}
+            icon={Users}
+          >
+            <TreeFileItem
+              active={currentTab === "employees"}
+              onClick={() => onSelectTab("employees")}
+              icon={Users}
+              label="Personnel Directory"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "attendance"}
+              onClick={() => onSelectTab("attendance")}
+              icon={CalendarCheck}
+              label="Attendance Roster"
+              badge="Muster"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* 7. WORKBOOK — VISIBLE FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* ============================================================ */}
+        {canSeeWorkbooks && (
+          <TreeFolder
+            label="Workbooks"
+            badge="Sheets"
+            isOpen={openFolders.workbooks}
+            onToggle={() => toggleFolder("workbooks")}
+            isShrunk={isShrunk}
+            icon={FileSpreadsheet}
+          >
+            <TreeFileItem
+              active={currentTab === "attendance"}
+              onClick={() => onSelectTab("attendance")}
+              icon={FileSpreadsheet}
+              label="Attendance Workbook"
+              badge="Excel"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "inventory-workbook"}
+              onClick={() => onSelectTab("inventory-workbook")}
+              icon={FileSpreadsheet}
+              label="Inventory Spreadsheet"
+              badge="Excel"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* 8. ADMIN AND SECURITY — FOR ADMIN AND SUPERADMIN */}
+        {/* ============================================================ */}
+        {canSeeSecurity && (
+          <TreeFolder
+            label="Admin & Security"
+            isOpen={openFolders.security}
+            onToggle={() => toggleFolder("security")}
+            isShrunk={isShrunk}
+            icon={ShieldCheck}
+          >
+            <TreeFileItem
+              active={currentTab === "users"}
+              onClick={() => onSelectTab("users")}
+              icon={ShieldCheck}
+              label="User Management"
+              badge="RBAC"
+              isShrunk={isShrunk}
+            />
+            <TreeFileItem
+              active={currentTab === "settings"}
+              onClick={() => onSelectTab("settings")}
+              icon={Settings}
+              label="Plant Configuration"
+              isShrunk={isShrunk}
+            />
+          </TreeFolder>
+        )}
+
+        {/* ============================================================ */}
+        {/* TEAM CHAT — QUICK WORKSPACE COMMUNICATIONS */}
+        {/* ============================================================ */}
+        <TreeFolder
+          label="Team Chat"
+          isOpen={openFolders.chat}
+          onToggle={() => toggleFolder("chat")}
+          isShrunk={isShrunk}
+          icon={MessageSquare}
+        >
+          <TreeFileItem
             active={currentTab === "chat"}
             onClick={() => onSelectTab("chat")}
             icon={MessageSquare}
-            label="Team Chat & Channels"
-            badge="Soon"
+            label="Team Channels & Chat"
+            badge="Live"
             isShrunk={isShrunk}
           />
-          <SidebarNavItem
-            active={currentTab === "inventory"}
-            onClick={() => onSelectTab("inventory")}
-            icon={Boxes}
-            label="Inventory"
-            badge="Store"
-            isShrunk={isShrunk}
-          />
-        </div>
-
-        {/* ============================================================ */}
-        {/* Store & Inventory Section */}
-        {/* ============================================================ */}
-        <div>
-          {!isShrunk ? (
-            <button
-              type="button"
-              onClick={() => toggleSection("inventory")}
-              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-              style={{ color: "var(--role-sidebar-section-title)" }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Boxes className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                <span>Store & Inventory</span>
-              </div>
-              <span
-                className="size-4 rounded flex items-center justify-center border transition-colors"
-                style={{
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  borderColor: "var(--role-sidebar-border)",
-                  color: "var(--role-sidebar-fg)",
-                }}
-              >
-                {collapsedSections.inventory ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <Minus className="size-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <div
-              className="h-2 border-b mb-1"
-              style={{ borderColor: "var(--role-sidebar-border)" }}
-            />
-          )}
-
-          {!collapsedSections.inventory && (
-            <div
-              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-              style={{ borderColor: "var(--role-sidebar-subtle)" }}
-            >
-              <SidebarNavItem
-                active={currentTab === "inventory"}
-                onClick={() => onSelectTab("inventory")}
-                icon={Boxes}
-                label="Inventory Master"
-                badge="4 Tabs"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "stock"}
-                onClick={() => onSelectTab("stock")}
-                icon={Package}
-                label="Raw Material Stock"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "inventory-workbook"}
-                onClick={() => onSelectTab("inventory-workbook")}
-                icon={FileSpreadsheet}
-                label="Inventory Spreadsheet"
-                badge="Excel"
-                isShrunk={isShrunk}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* ============================================================ */}
-        {/* Reports Section (2 Sub-topics: Tab 1 & Tab 2) */}
-        {/* ============================================================ */}
-        {!isAccountant && (
-          <div>
-            {!isShrunk ? (
-              <button
-                type="button"
-                onClick={() => toggleSection("reports")}
-                className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-                style={{ color: "var(--role-sidebar-section-title)" }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <BarChart3 className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                  <span>Reports</span>
-                </div>
-                <span
-                  className="size-4 rounded flex items-center justify-center border transition-colors"
-                  style={{
-                    backgroundColor: "var(--role-sidebar-subtle)",
-                    borderColor: "var(--role-sidebar-border)",
-                    color: "var(--role-sidebar-fg)",
-                  }}
-                >
-                  {collapsedSections.reports ? (
-                    <ChevronRight className="size-3" />
-                  ) : (
-                    <Minus className="size-3" />
-                  )}
-                </span>
-              </button>
-            ) : (
-              <div
-                className="h-2 border-b mb-1"
-                style={{ borderColor: "var(--role-sidebar-border)" }}
-              />
-            )}
-
-            {/* 2 Sub topics with One Tab Space Indentation for Tab 1 and Tab 2 */}
-            {!collapsedSections.reports && (
-              <div
-                className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-                style={{ borderColor: "var(--role-sidebar-subtle)" }}
-              >
-                <SidebarNavItem
-                  active={currentTab === "reports-progress" || currentTab === "reports"}
-                  onClick={() => onSelectTab("reports-progress")}
-                  icon={Activity}
-                  label="Project Progress"
-                  badge="Tab 1"
-                  isShrunk={isShrunk}
-                />
-                <SidebarNavItem
-                  active={currentTab === "reports-details"}
-                  onClick={() => onSelectTab("reports-details")}
-                  icon={Layers}
-                  label="Project Details"
-                  badge="Tab 2"
-                  isShrunk={isShrunk}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* Accounts & Commercial Section (THE ACCOUNTANT WORKSPACE) */}
-        {/* ============================================================ */}
-        <div>
-          {!isShrunk ? (
-            <button
-              type="button"
-              onClick={() => toggleSection("commercial")}
-              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-              style={{ color: "var(--role-sidebar-section-title)" }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Landmark className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                <span>Accounts & Commercial</span>
-              </div>
-              <span
-                className="size-4 rounded flex items-center justify-center border transition-colors"
-                style={{
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  borderColor: "var(--role-sidebar-border)",
-                  color: "var(--role-sidebar-fg)",
-                }}
-              >
-                {collapsedSections.commercial ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <Minus className="size-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <div
-              className="h-2 border-b mb-1"
-              style={{ borderColor: "var(--role-sidebar-border)" }}
-            />
-          )}
-
-          {/* Sub topics with One Tab Space Indentation */}
-          {!collapsedSections.commercial && (
-            <div
-              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-              style={{ borderColor: "var(--role-sidebar-subtle)" }}
-            >
-              <SidebarNavItem
-                active={currentTab === "accounts"}
-                onClick={() => onSelectTab("accounts")}
-                icon={DollarSign}
-                label="Accounts & 3-Way Match"
-                badge={isAccountant ? "Priority" : undefined}
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "ledger"}
-                onClick={() => onSelectTab("ledger")}
-                icon={BookOpen}
-                label="Atomic Stock Ledger"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "supplies"}
-                onClick={() => onSelectTab("supplies")}
-                icon={Truck}
-                label="Inward Goods & Challans"
-                isShrunk={isShrunk}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* ============================================================ */}
-        {/* People & Workforce Section */}
-        {/* ============================================================ */}
-        <div>
-          {!isShrunk ? (
-            <button
-              type="button"
-              onClick={() => toggleSection("people")}
-              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-              style={{ color: "var(--role-sidebar-section-title)" }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Users className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                <span>People & HR</span>
-              </div>
-              <span
-                className="size-4 rounded flex items-center justify-center border transition-colors"
-                style={{
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  borderColor: "var(--role-sidebar-border)",
-                  color: "var(--role-sidebar-fg)",
-                }}
-              >
-                {collapsedSections.people ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <Minus className="size-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <div
-              className="h-2 border-b mb-1"
-              style={{ borderColor: "var(--role-sidebar-border)" }}
-            />
-          )}
-
-          {!collapsedSections.people && (
-            <div
-              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-              style={{ borderColor: "var(--role-sidebar-subtle)" }}
-            >
-              <SidebarNavItem
-                active={currentTab === "employees"}
-                onClick={() => onSelectTab("employees")}
-                icon={Users}
-                label="Personnel Directory"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "attendance"}
-                onClick={() => onSelectTab("attendance")}
-                icon={CalendarCheck}
-                label="Attendance"
-                badge="3 Tabs"
-                isShrunk={isShrunk}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* ============================================================ */}
-        {/* Files & Excel Workspaces (Section 30 & 68) */}
-        {/* ============================================================ */}
-        <div>
-          {!isShrunk ? (
-            <button
-              type="button"
-              onClick={() => toggleSection("files")}
-              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-              style={{ color: "var(--role-sidebar-section-title)" }}
-            >
-              <div className="flex items-center gap-1.5">
-                <FileSpreadsheet className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                <span>Files & Workbooks</span>
-              </div>
-              <span
-                className="size-4 rounded flex items-center justify-center border transition-colors"
-                style={{
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  borderColor: "var(--role-sidebar-border)",
-                  color: "var(--role-sidebar-fg)",
-                }}
-              >
-                {collapsedSections.files ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <Minus className="size-3" />
-                )}
-              </span>
-            </button>
-          ) : (
-            <div
-              className="h-2 border-b mb-1"
-              style={{ borderColor: "var(--role-sidebar-border)" }}
-            />
-          )}
-
-          {!collapsedSections.files && (
-            <div
-              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-              style={{ borderColor: "var(--role-sidebar-subtle)" }}
-            >
-              <SidebarNavItem
-                active={currentTab === "attendance"}
-                onClick={() => onSelectTab("attendance")}
-                icon={FileSpreadsheet}
-                label="Attendance Workbook"
-                badge="Excel"
-                isShrunk={isShrunk}
-              />
-              <SidebarNavItem
-                active={currentTab === "inventory-workbook"}
-                onClick={() => onSelectTab("inventory-workbook")}
-                icon={FileSpreadsheet}
-                label="Inventory"
-                badge="Excel"
-                isShrunk={isShrunk}
-              />
-            </div>
-          )}
-        </div>
-
-
-
-        {/* ============================================================ */}
-        {/* Configuration & Security Section */}
-        {/* ============================================================ */}
-        {(isSuperAdmin || isAdmin) && (
-          <div>
-            {!isShrunk ? (
-              <button
-                type="button"
-                onClick={() => toggleSection("security")}
-                className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
-                style={{ color: "var(--role-sidebar-section-title)" }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Settings className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
-                  <span>Administration & Security</span>
-                </div>
-                <span
-                  className="size-4 rounded flex items-center justify-center border transition-colors"
-                  style={{
-                    backgroundColor: "var(--role-sidebar-subtle)",
-                    borderColor: "var(--role-sidebar-border)",
-                    color: "var(--role-sidebar-fg)",
-                  }}
-                >
-                  {collapsedSections.security ? (
-                    <ChevronRight className="size-3" />
-                  ) : (
-                    <Minus className="size-3" />
-                  )}
-                </span>
-              </button>
-            ) : (
-              <div
-                className="h-2 border-b mb-1"
-                style={{ borderColor: "var(--role-sidebar-border)" }}
-              />
-            )}
-
-            {/* Sub topics with One Tab Space Indentation */}
-            {!collapsedSections.security && (
-              <div
-                className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
-                style={{ borderColor: "var(--role-sidebar-subtle)" }}
-              >
-                <SidebarNavItem
-                  active={currentTab === "users"}
-                  onClick={() => onSelectTab("users")}
-                  icon={ShieldCheck}
-                  label="User Management"
-                  badge="RBAC"
-                  isShrunk={isShrunk}
-                />
-                <SidebarNavItem
-                  active={currentTab === "settings"}
-                  onClick={() => onSelectTab("settings")}
-                  icon={Settings}
-                  label="Plant Configuration"
-                  isShrunk={isShrunk}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        </TreeFolder>
       </nav>
 
       {/* 3. User Profile & Logout Footer */}
@@ -674,7 +572,99 @@ export function Kfab360Sidebar({
   );
 }
 
-interface SidebarNavItemProps {
+// ============================================================================
+// ANTIGRAVITY IDE STYLE TREE FOLDER COMPONENT (Arrow + Folder + Name)
+// ============================================================================
+
+interface TreeFolderProps {
+  label: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: string;
+  isShrunk?: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
+  children?: React.ReactNode;
+}
+
+function TreeFolder({
+  label,
+  isOpen,
+  onToggle,
+  badge,
+  isShrunk = false,
+  children,
+}: TreeFolderProps) {
+  if (isShrunk) {
+    return <div className="space-y-1">{children}</div>;
+  }
+
+  return (
+    <div className="select-none mb-1">
+      {/* Arrow then Folder then Name (Antigravity Explorer Style) */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-all duration-150 cursor-pointer group hover:bg-[var(--role-sidebar-item-hover-bg)]"
+        style={{ color: "var(--role-sidebar-section-title)" }}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* Arrow Indicator: ChevronRight or ChevronDown */}
+          <span className="shrink-0 transition-transform duration-150 text-slate-400 group-hover:text-slate-700 dark:text-slate-500">
+            {isOpen ? (
+              <ChevronDown className="size-3.5 stroke-[2.5]" />
+            ) : (
+              <ChevronRight className="size-3.5 stroke-[2.5]" />
+            )}
+          </span>
+
+          {/* Folder Icon: Open or Closed */}
+          {isOpen ? (
+            <FolderOpen className="size-4 shrink-0 text-amber-500 fill-amber-400/20" />
+          ) : (
+            <Folder className="size-4 shrink-0 text-amber-500/80 fill-amber-400/10" />
+          )}
+
+          {/* Folder Name */}
+          <span
+            className="truncate uppercase font-bold tracking-wider text-[11px]"
+            style={{ color: "var(--role-sidebar-fg)" }}
+          >
+            {label}
+          </span>
+        </div>
+
+        {badge && (
+          <span
+            className="text-[9px] px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider shrink-0"
+            style={{
+              backgroundColor: "var(--role-sidebar-subtle)",
+              color: "var(--role-sidebar-section-title)",
+              border: "1px solid var(--role-sidebar-border)",
+            }}
+          >
+            {badge}
+          </span>
+        )}
+      </button>
+
+      {/* Indented Sub-Tree with Antigravity IDE Vertical Guide Line */}
+      {isOpen && (
+        <div
+          className="ml-3.5 pl-2.5 border-l-2 my-0.5 space-y-0.5"
+          style={{ borderColor: "var(--role-sidebar-border)" }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// ANTIGRAVITY IDE STYLE TREE FILE / LEAF ITEM COMPONENT
+// ============================================================================
+
+interface TreeFileItemProps {
   active: boolean;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
@@ -683,22 +673,22 @@ interface SidebarNavItemProps {
   isShrunk?: boolean;
 }
 
-function SidebarNavItem({
+function TreeFileItem({
   active,
   onClick,
   icon: Icon,
   label,
   badge,
   isShrunk = false,
-}: SidebarNavItemProps) {
+}: TreeFileItemProps) {
   return (
     <button
       onClick={onClick}
       title={isShrunk ? label : undefined}
       className={`relative w-full flex items-center ${
-        isShrunk ? "justify-center p-2.5" : "justify-between px-3 py-2"
-      } rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer overflow-hidden group ${
-        active ? "shadow-md font-bold" : "hover:opacity-90"
+        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-1.5 rounded-lg"
+      } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group ${
+        active ? "font-bold shadow-xs" : "font-medium hover:bg-[var(--role-sidebar-item-hover-bg)]"
       }`}
       style={
         active
@@ -714,14 +704,18 @@ function SidebarNavItem({
       {/* Role-themed Accent Indicator Bar on Left Edge */}
       {active && (
         <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-5 rounded-r-full shadow-sm"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full"
           style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
         />
       )}
 
-      <div className="flex items-center gap-2.5 min-w-0">
-        <Icon className="size-4 shrink-0 transition-colors" />
-        {!isShrunk && <span className="truncate">{label}</span>}
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon
+          className={`size-3.5 shrink-0 transition-opacity ${
+            active ? "opacity-100" : "opacity-70 group-hover:opacity-100"
+          }`}
+        />
+        {!isShrunk && <span className="truncate text-[11.5px]">{label}</span>}
       </div>
 
       {!isShrunk && badge && (
@@ -730,7 +724,7 @@ function SidebarNavItem({
           style={
             active
               ? {
-                  backgroundColor: "rgba(0, 0, 0, 0.15)",
+                  backgroundColor: "rgba(255, 255, 255, 0.2)",
                   color: "inherit",
                 }
               : {
