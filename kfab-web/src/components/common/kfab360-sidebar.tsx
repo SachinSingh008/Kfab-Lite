@@ -315,7 +315,6 @@ export function Kfab360Sidebar({
           onClick={() => onSelectTab("dashboard")}
           icon={LayoutDashboard}
           label={getRoleDashboardLabel()}
-          badge={currentUser.role.replace("_", " ")}
           isShrunk={isShrunk}
         />
 
@@ -336,7 +335,6 @@ export function Kfab360Sidebar({
         {canSeeInventory && (
           <TreeFolder
             label="Inventory"
-            badge="For All"
             isOpen={openFolders.inventory}
             onToggle={() => toggleFolder("inventory")}
             isShrunk={isShrunk}
@@ -347,7 +345,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("inventory")}
               icon={Boxes}
               label="Inventory Master"
-              badge="Store"
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -376,7 +373,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("reports-progress")}
               icon={Activity}
               label="Project Progress"
-              badge="Tab 1"
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -384,7 +380,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("reports-details")}
               icon={Layers}
               label="Project Details"
-              badge="Tab 2"
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -420,7 +415,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("accounts")}
               icon={DollarSign}
               label="Accounts & 3-Way Match"
-              badge={isAccountant ? "Priority" : undefined}
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -463,7 +457,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("attendance")}
               icon={CalendarCheck}
               label="Attendance Roster"
-              badge="Muster"
               isShrunk={isShrunk}
             />
           </TreeFolder>
@@ -475,7 +468,6 @@ export function Kfab360Sidebar({
         {canSeeWorkbooks && (
           <TreeFolder
             label="Workbooks"
-            badge="Sheets"
             isOpen={openFolders.workbooks}
             onToggle={() => toggleFolder("workbooks")}
             isShrunk={isShrunk}
@@ -486,7 +478,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("attendance")}
               icon={FileSpreadsheet}
               label="Attendance Workbook"
-              badge="Excel"
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -494,7 +485,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("inventory-workbook")}
               icon={FileSpreadsheet}
               label="Inventory Spreadsheet"
-              badge="Excel"
               isShrunk={isShrunk}
             />
           </TreeFolder>
@@ -516,7 +506,6 @@ export function Kfab360Sidebar({
               onClick={() => onSelectTab("users")}
               icon={ShieldCheck}
               label="User Management"
-              badge="RBAC"
               isShrunk={isShrunk}
             />
             <TreeFileItem
@@ -537,7 +526,6 @@ export function Kfab360Sidebar({
           onClick={() => onSelectTab("chat")}
           icon={MessageSquare}
           label="Team Channels & Chat"
-          badge="Live"
           isShrunk={isShrunk}
         />
       </nav>
