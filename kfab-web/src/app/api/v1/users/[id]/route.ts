@@ -37,9 +37,20 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(20);
 
-    // Also get Auth user to ensure accurate lastLoginAt and createdAt
+    // Also get Auth user to ensure user exists in database and has accurate timestamps
     const { data: authUserCheck } = await admin.auth.admin.getUserById(id);
-    const authUser = authUserCheck?.user;
+    let authUser = authUserCheck?.user || null;
+    if (!authUser) {
+      const { data: listData } = await admin.auth.admin.listUsers();
+      authUser = listData?.users.find((u) => u.id === id || u.email?.toLowerCase() === profile?.email?.toLowerCase()) || null;
+    }
+
+    if (!authUser) {
+      return NextResponse.json(
+        { statusCode: 404, message: 'User account does not exist in database (auth.users).' },
+        { status: 404 }
+      );
+    }
 
     const user = {
       id: profile.id,

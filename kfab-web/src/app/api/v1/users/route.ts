@@ -32,28 +32,48 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Also fetch Auth users list to guarantee accurate last_sign_in_at and created_at
-    const { data: authData } = await admin.auth.admin.listUsers();
-    const authMap = new Map((authData?.users || []).map((u) => [u.id, u]));
+    // Authoritative user accounts in the database (auth.users)
+    const { data: authData, error: authError } = await admin.auth.admin.listUsers();
+    if (authError || !authData?.users) {
+      console.error('[GET /api/v1/users] Supabase auth listUsers error:', authError);
+      return NextResponse.json(
+        { statusCode: 500, message: `Database error: ${authError?.message || 'Failed to list auth users'}` },
+        { status: 500 }
+      );
+    }
 
-    let users = (profiles || []).map((p: any) => {
-      const authUser = authMap.get(p.id);
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+    const profileEmailMap = new Map((profiles || []).map((p: any) => [p.email?.toLowerCase(), p]));
+
+    // Authoritative accounts sourced strictly from the database (auth.users)
+    let users = authData.users.map((authUser) => {
+      const p = profileMap.get(authUser.id) || (authUser.email ? profileEmailMap.get(authUser.email.toLowerCase()) : undefined);
+      const userMeta = authUser.user_metadata || {};
+
+      let role = p?.role || userMeta.role || 'VIEWER';
+      if (role === 'ACCOUNT') role = 'ACCOUNTANT';
+      const isSuper =
+        role === 'SUPER_ADMIN' ||
+        userMeta.is_super_admin === true ||
+        authUser.email?.toLowerCase() === 'sachinasinghofficial@gmail.com';
+      if (isSuper) role = 'SUPER_ADMIN';
+
       return {
-        id: p.id,
-        fullName: p.full_name || authUser?.user_metadata?.full_name || 'User',
-        email: p.email || authUser?.email,
-        username: p.email || authUser?.email,
-        role: p.role,
-        status: p.status || 'ACTIVE',
+        id: authUser.id,
+        fullName: p?.full_name || userMeta.full_name || authUser.email?.split('@')[0] || 'User',
+        email: authUser.email || p?.email || '',
+        username: authUser.email || p?.email || '',
+        role,
+        status: p?.status || (authUser.banned_until ? 'INACTIVE' : 'ACTIVE'),
         department: null,
         designation: null,
         employeeId: null,
-        forcePasswordReset: p.force_password_reset ?? false,
-        isSuperAdmin: p.role === 'SUPER_ADMIN',
-        lastLoginAt: p.last_login_at || authUser?.last_sign_in_at || null,
-        sessionRevokedAt: p.session_revoked_at,
-        createdAt: authUser?.created_at || p.created_at || new Date().toISOString(),
-        updatedAt: p.updated_at || new Date().toISOString(),
+        forcePasswordReset: p?.force_password_reset ?? false,
+        isSuperAdmin: isSuper,
+        lastLoginAt: authUser.last_sign_in_at || p?.last_login_at || null,
+        sessionRevokedAt: p?.session_revoked_at || null,
+        createdAt: authUser.created_at || p?.created_at || new Date().toISOString(),
+        updatedAt: p?.updated_at || authUser.updated_at || new Date().toISOString(),
       };
     });
 

@@ -34,6 +34,7 @@ const KNOWN_PURGE_EMAILS = new Set([
   'supervisor@kfab.in',
   'accountant@kfab.in',
   'ajit.ksingh18@gmail.com',
+  'sachinacc@gmail.com',
 ]);
 
 const KNOWN_PURGE_IDS = new Set([
@@ -316,10 +317,39 @@ export async function createUserRecord(params: {
 }
 
 export async function syncUsersFromSupabase(): Promise<AppUser[]> {
-  const supabase = createClient();
-  if (!supabase) return getStoredUsers();
-
   try {
+    // 1. Authoritative sync directly from /api/v1/users (backed by Supabase Auth database)
+    if (typeof window !== 'undefined') {
+      try {
+        const resp = await fetch('/api/v1/users?limit=100');
+        if (resp.ok) {
+          const json = await resp.json();
+          if (Array.isArray(json.users) && json.users.length > 0) {
+            const currentStored = getStoredUsers();
+            const syncedList: AppUser[] = json.users.map((u: any) => {
+              const existing = currentStored.find((s) => s.id === u.id || s.username.toLowerCase() === u.email.toLowerCase());
+              return {
+                id: u.id,
+                name: u.fullName || existing?.name || 'User',
+                username: u.email || existing?.username || 'user',
+                password: existing?.password || 'password123',
+                role: (u.role === 'ACCOUNT' ? 'ACCOUNTANT' : u.role) as AppRole,
+                status: (u.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
+                createdAt: u.createdAt || new Date().toISOString(),
+              };
+            });
+            saveStoredUsers(syncedList);
+            return syncedList;
+          }
+        }
+      } catch (e) {
+        console.warn('[syncUsersFromSupabase] /api/v1/users fetch failed, falling back to direct db:', e);
+      }
+    }
+
+    const supabase = createClient();
+    if (!supabase) return getStoredUsers();
+
     let fetchedProfiles: Array<{
       id: string;
       full_name: string | null;
@@ -330,18 +360,12 @@ export async function syncUsersFromSupabase(): Promise<AppUser[]> {
       created_at: string;
     }> | null = null;
 
-    // 1. Try admin_get_all_users RPC
-    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_all_users');
-    if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
-      fetchedProfiles = rpcData;
-    } else {
-      // 2. Fallback to direct profiles table query
-      const { data: tableData, error: tableError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, status, created_at');
-      if (!tableError && tableData && tableData.length > 0) {
-        fetchedProfiles = tableData;
-      }
+    // Direct profiles table query
+    const { data: tableData, error: tableError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, status, created_at');
+    if (!tableError && tableData && tableData.length > 0) {
+      fetchedProfiles = tableData;
     }
 
     if (!fetchedProfiles || fetchedProfiles.length === 0) {
