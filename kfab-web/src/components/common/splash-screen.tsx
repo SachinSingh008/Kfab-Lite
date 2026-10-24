@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -126,14 +125,7 @@ export function SplashScreen({
           </div>
         </div>
 
-        {/* Continue to Portal Button (Pure text link, Zero background fill) */}
-        <button
-          onClick={handleFinish}
-          className="mt-7 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-white/90 hover:text-white uppercase tracking-widest py-2 px-5 rounded-full border border-white/20 hover:border-amber-400/80 hover:bg-white/10 transition-all cursor-pointer backdrop-blur-md shadow-xl hover:scale-105 group"
-        >
-          <span>Continue to Portal</span>
-          <ArrowRight className="size-4 text-[#F59E0B] group-hover:translate-x-1 transition-transform" />
-        </button>
+
       </div>
 
       {/* 4. Bottom Corporate Footer */}
