@@ -482,16 +482,18 @@ export function DashboardView({
         queryParams.set("projectId", selectedProjectId);
       }
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-      const res = await fetch(`${backendUrl}/api/v1/dashboard/overview?${queryParams.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (backendUrl) {
+        const res = await fetch(`${backendUrl}/api/v1/dashboard/overview?${queryParams.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          setDashboardData(json.data);
-          return;
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setDashboardData(json.data);
+            return;
+          }
         }
       }
     } catch {
@@ -526,15 +528,17 @@ export function DashboardView({
   const handleCreateIssue = async (newIssue: { projectId: string; title: string; description: string; priority: any; category: string }) => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("kfab_auth_token") : null;
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-      await fetch(`${backendUrl}/api/v1/dashboard/issues`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(newIssue),
-      });
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (backendUrl) {
+        await fetch(`${backendUrl}/api/v1/dashboard/issues`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(newIssue),
+        });
+      }
     } catch {
       // ignore
     }
