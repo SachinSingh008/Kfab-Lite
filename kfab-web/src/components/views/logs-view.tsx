@@ -89,7 +89,7 @@ function RoleBadge({ role }: { role?: string | null }) {
       );
     case "SUPERVISOR":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-amber-100 text-amber-800 border border-amber-200">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-red-100 text-red-800 border border-red-200">
           SUPERVISOR
         </span>
       );

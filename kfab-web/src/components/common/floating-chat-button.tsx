@@ -144,19 +144,19 @@ export function FloatingChatButton({
         };
       case "ADMIN":
         return {
+          bg: "bg-[#00288A] hover:bg-[#001F6D]",
+          text: "text-white",
+          border: "border-blue-300",
+          glow: "shadow-[0_4px_20px_rgba(0,40,138,0.4)] ring-2 ring-blue-400/40",
+          badgeBg: "bg-white text-blue-900",
+        };
+      case "SUPERVISOR":
+        return {
           bg: "bg-[#DC2626] hover:bg-[#B91C1C]",
           text: "text-white",
           border: "border-red-300",
           glow: "shadow-[0_4px_20px_rgba(220,38,38,0.4)] ring-2 ring-red-400/40",
           badgeBg: "bg-white text-red-700",
-        };
-      case "SUPERVISOR":
-        return {
-          bg: "bg-[#CA8A04] hover:bg-[#A16207]",
-          text: "text-slate-900",
-          border: "border-yellow-300",
-          glow: "shadow-[0_4px_20px_rgba(202,138,4,0.4)] ring-2 ring-yellow-400/40",
-          badgeBg: "bg-slate-900 text-yellow-400",
         };
       case "ACCOUNT":
       case "ACCOUNTANT":
@@ -634,14 +634,14 @@ export function FloatingChatButton({
               <button
                 type="button"
                 onClick={() => dispatchFinalMessage("ROLE", "SUPERVISOR")}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/60 flex items-center justify-between text-left transition-all cursor-pointer group mt-2"
+                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-red-500 hover:bg-red-50/60 flex items-center justify-between text-left transition-all cursor-pointer group mt-2"
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold">
+                  <div className="size-8 rounded-lg bg-[#DC2626] text-white flex items-center justify-center font-bold">
                     <Users className="size-4" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-900 group-hover:text-amber-900">
+                    <h5 className="text-xs font-bold text-slate-900 group-hover:text-red-900">
                       All Supervisors (Supervisor All)
                     </h5>
                     <p className="text-[10px] text-slate-500">
@@ -649,7 +649,7 @@ export function FloatingChatButton({
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded">
                   All Supv
                 </span>
               </button>
@@ -660,7 +660,7 @@ export function FloatingChatButton({
                   key={sup.userId}
                   type="button"
                   onClick={() => dispatchFinalMessage("USERS", undefined, sup.userId, sup.name)}
-                  className="w-full pl-6 pr-3 py-2 rounded-lg border border-slate-200 hover:border-amber-500 hover:bg-amber-50 flex items-center justify-between text-left transition-colors cursor-pointer text-xs"
+                  className="w-full pl-6 pr-3 py-2 rounded-lg border border-slate-200 hover:border-red-500 hover:bg-red-50 flex items-center justify-between text-left transition-colors cursor-pointer text-xs"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400 text-xs">&bull;</span>

@@ -529,38 +529,54 @@ export async function apiResetPassword(
     revokeExistingSessions?: boolean;
   }
 ): Promise<{ message: string }> {
-  const isLocalOrHasBackend = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    Boolean(process.env.NEXT_PUBLIC_BACKEND_URL)
-  );
+  try {
+    const res = await apiRequest<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: id,
+        ...payload,
+      }),
+    });
 
-  if (isLocalOrHasBackend) {
+    // Synchronize client-side local cache
+    const stored = getStoredUsers();
+    const idx = stored.findIndex((u) => u.id === id);
+    if (idx !== -1 && payload.newPassword) {
+      stored[idx].password = payload.newPassword;
+      saveStoredUsers(stored);
+    }
+
+    return res;
+  } catch (primaryErr: unknown) {
+    // Secondary attempt on legacy route
     try {
-      return await apiRequest<{ message: string }>(`/api/v1/users/${id}/reset-password`, {
+      const res = await apiRequest<{ message: string }>(`/api/v1/users/${id}/reset-password`, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-    } catch (err) {
-      console.warn('[apiResetPassword] Backend request failed, applying direct database/store update:', err);
-    }
-  }
 
-  // Direct Database & Auth-Store Update (ideal for Vercel + Supabase architecture)
-  const stored = getStoredUsers();
-  const idx = stored.findIndex((u) => u.id === id);
-  if (idx !== -1) {
-    if (payload.newPassword) {
-      stored[idx].password = payload.newPassword;
+      const stored = getStoredUsers();
+      const idx = stored.findIndex((u) => u.id === id);
+      if (idx !== -1 && payload.newPassword) {
+        stored[idx].password = payload.newPassword;
+        saveStoredUsers(stored);
+      }
+
+      return res;
+    } catch {
+      console.warn('[apiResetPassword] Next.js API route error, using local store fallback:', primaryErr);
+      const stored = getStoredUsers();
+      const idx = stored.findIndex((u) => u.id === id);
+      if (idx !== -1 && payload.newPassword) {
+        stored[idx].password = payload.newPassword;
+        saveStoredUsers(stored);
+        return {
+          message: `Password for "${stored[idx].name}" updated in directory.`,
+        };
+      }
+      throw primaryErr;
     }
-    saveStoredUsers(stored);
-    return {
-      message: `Password for "${stored[idx].name}" updated successfully.`,
-    };
   }
-  return {
-    message: 'Password reset processed successfully.',
-  };
 }
 
 export async function apiRevokeSessions(

@@ -36,7 +36,7 @@
 /* DYNAMIC ROLE-BASED COLOR THEMES */
 /* ============================================================ */
 
-/* 1. Super Admin: Authoritative Slate #0F172A + Amber #F59E0B (Same as it is) */
+/* 1. Super Admin: Authoritative Slate #0F172A + Amber #F59E0B */
 :root,
 [data-role-theme="SUPER_ADMIN"] {
   --role-primary: #0f172a;
@@ -49,8 +49,11 @@
   --role-subtle: #f8fafc;
   --role-header-border: #cbd5e1;
   --role-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.15);
+  --role-card-bg: #ffffff;
+  --role-content-bg: #f8fafc;
+  --role-header-title: #0f172a;
 
-  /* Sidebar: Same as it is (Clean White) */
+  /* Sidebar: Authoritative Slate / Clean White */
   --role-sidebar-bg: #ffffff;
   --role-sidebar-fg: #0f172a;
   --role-sidebar-border: #e2e8f0;
@@ -63,7 +66,7 @@
   --role-sidebar-item-active-fg: #ffffff;
   --role-sidebar-item-active-accent: #f59e0b;
 
-  /* Navbar: Same as it is (Clean White) */
+  /* Navbar: Clean White */
   --role-navbar-bg: #ffffff;
   --role-navbar-fg: #0f172a;
   --role-navbar-border: #e2e8f0;
@@ -81,8 +84,55 @@
   --role-div-heading-border: #e2e8f0;
 }
 
-/* 2. Admin: RED THEME (#DC2626 / Light Red Surface + Crimson Selected Tab) */
+/* 2. Admin: KFAB LOGO ROYAL BLUE THEME (#00288A / Light Ice Blue Surface + Deep Logo Blue Selected Tab) */
 [data-role-theme="ADMIN"] {
+  --role-primary: #00288a;
+  --role-primary-hover: #001f6d;
+  --role-accent: #2563eb;
+  --role-accent-hover: #1d4ed8;
+  --role-badge-bg: #eff6ff;
+  --role-badge-text: #00288a;
+  --role-border: #bfdbfe;
+  --role-subtle: #f0f7ff;
+  --role-header-border: #bfdbfe;
+  --role-shadow: 0 4px 14px 0 rgba(0, 40, 138, 0.15);
+  --role-card-bg: #ffffff;
+  --role-content-bg: #f0f7ff;
+  --role-header-title: #00288a;
+
+  /* Sidebar: Light KFAB Blue Theme */
+  --role-sidebar-bg: #f0f7ff;
+  --role-sidebar-fg: #0f172a;
+  --role-sidebar-border: #bfdbfe;
+  --role-sidebar-subtle: #dbeafe;
+  --role-sidebar-section-title: #00288a;
+  --role-sidebar-item-fg: #1e3a8a;
+  --role-sidebar-item-hover-bg: #dbeafe;
+  --role-sidebar-item-hover-fg: #001f6d;
+  --role-sidebar-item-active-bg: #00288a;
+  --role-sidebar-item-active-fg: #ffffff;
+  --role-sidebar-item-active-accent: #60a5fa;
+
+  /* Navbar: Light KFAB Blue Theme */
+  --role-navbar-bg: #f0f7ff;
+  --role-navbar-fg: #00288a;
+  --role-navbar-border: #bfdbfe;
+  --role-navbar-muted: #1e40af;
+  --role-navbar-badge-bg: #dbeafe;
+  --role-navbar-badge-fg: #00288a;
+  --role-navbar-search-bg: #ffffff;
+  --role-navbar-search-border: #93c5fd;
+  --role-navbar-search-text: #0f172a;
+
+  /* Div Headings: KFAB Blue */
+  --role-div-heading-color: #00288a;
+  --role-div-heading-category-bg: #dbeafe;
+  --role-div-heading-category-fg: #00288a;
+  --role-div-heading-border: #bfdbfe;
+}
+
+/* 3. Supervisor: RED THEME (#DC2626 / Light Red Surface + Crimson Selected Tab) */
+[data-role-theme="SUPERVISOR"] {
   --role-primary: #dc2626;
   --role-primary-hover: #b91c1c;
   --role-accent: #ef4444;
@@ -93,6 +143,9 @@
   --role-subtle: #fff5f5;
   --role-header-border: #fca5a5;
   --role-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.15);
+  --role-card-bg: #ffffff;
+  --role-content-bg: #fff5f5;
+  --role-header-title: #dc2626;
 
   /* Sidebar: Light Red Theme */
   --role-sidebar-bg: #fff5f5;
@@ -125,51 +178,6 @@
   --role-div-heading-border: #fca5a5;
 }
 
-/* 3. Supervisor: LIGHT LEMON YELLOW (Sidebar & Navbar) + NORMAL YELLOW (Selected Tab) */
-[data-role-theme="SUPERVISOR"] {
-  --role-primary: #ca8a04;
-  --role-primary-hover: #a16207;
-  --role-accent: #facc15;
-  --role-accent-hover: #eab308;
-  --role-badge-bg: #fef08a;
-  --role-badge-text: #713f12;
-  --role-border: #fde047;
-  --role-subtle: #fefce8;
-  --role-header-border: #fde047;
-  --role-shadow: 0 4px 14px 0 rgba(202, 138, 4, 0.15);
-
-  /* Sidebar: Light Lemon Yellow Theme */
-  --role-sidebar-bg: #fefce8;
-  --role-sidebar-fg: #0f172a;
-  --role-sidebar-border: #fef08a;
-  --role-sidebar-subtle: #fef9c3;
-  --role-sidebar-section-title: #854d0e;
-  --role-sidebar-item-fg: #713f12;
-  --role-sidebar-item-hover-bg: #fef08a;
-  --role-sidebar-item-hover-fg: #0f172a;
-  /* Selected Tab: Yellow Normal with dark text */
-  --role-sidebar-item-active-bg: #facc15;
-  --role-sidebar-item-active-fg: #0f172a;
-  --role-sidebar-item-active-accent: #ca8a04;
-
-  /* Navbar: Light Lemon Yellow Theme */
-  --role-navbar-bg: #fefce8;
-  --role-navbar-fg: #713f12;
-  --role-navbar-border: #fef08a;
-  --role-navbar-muted: #854d0e;
-  --role-navbar-badge-bg: #fef08a;
-  --role-navbar-badge-fg: #713f12;
-  --role-navbar-search-bg: #ffffff;
-  --role-navbar-search-border: #fde047;
-  --role-navbar-search-text: #0f172a;
-
-  /* Div Headings: Rich Golden Amber / Bronze */
-  --role-div-heading-color: #854d0e;
-  --role-div-heading-category-bg: #fef9c3;
-  --role-div-heading-category-fg: #713f12;
-  --role-div-heading-border: #fde047;
-}
-
 /* 4. Accountant: LIGHT GREEN (Sidebar & Navbar) + DARK GREEN (Selected Tab / Section) */
 [data-role-theme="ACCOUNTANT"],
 [data-role-theme="ACCOUNTS"] {
@@ -183,6 +191,9 @@
   --role-subtle: #f0fdf4;
   --role-header-border: #86efac;
   --role-shadow: 0 4px 14px 0 rgba(21, 128, 61, 0.15);
+  --role-card-bg: #ffffff;
+  --role-content-bg: #f0fdf4;
+  --role-header-title: #15803d;
 
   /* Sidebar: Light Green Theme */
   --role-sidebar-bg: #f0fdf4;

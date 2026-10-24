@@ -191,8 +191,8 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
                 onClick={() => handleRoleSelect("admin")}
                 className={`py-2 px-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center ${
                   selectedRole === "admin"
-                    ? "bg-[#DC2626] text-white shadow-sm shadow-red-600/30"
-                    : "text-slate-600 hover:text-[#DC2626]"
+                    ? "bg-[#00288A] text-white shadow-sm shadow-blue-800/30"
+                    : "text-slate-600 hover:text-[#00288A]"
                 }`}
               >
                 Admin
@@ -202,8 +202,8 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
                 onClick={() => handleRoleSelect("supervisor")}
                 className={`py-2 px-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer text-center ${
                   selectedRole === "supervisor"
-                    ? "bg-[#FACC15] text-[#0F172A] shadow-sm shadow-yellow-400/40 border border-[#EAB308]"
-                    : "text-slate-600 hover:text-[#CA8A04]"
+                    ? "bg-[#DC2626] text-white shadow-sm shadow-red-600/30"
+                    : "text-slate-600 hover:text-[#DC2626]"
                 }`}
               >
                 Supervisor
