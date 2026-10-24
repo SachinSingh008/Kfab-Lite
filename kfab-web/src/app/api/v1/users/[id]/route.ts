@@ -37,11 +37,15 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(20);
 
+    // Also get Auth user to ensure accurate lastLoginAt and createdAt
+    const { data: authUserCheck } = await admin.auth.admin.getUserById(id);
+    const authUser = authUserCheck?.user;
+
     const user = {
       id: profile.id,
-      fullName: profile.full_name || 'User',
-      email: profile.email,
-      username: profile.email,
+      fullName: profile.full_name || authUser?.user_metadata?.full_name || 'User',
+      email: profile.email || authUser?.email,
+      username: profile.email || authUser?.email,
       role: profile.role,
       status: profile.status || 'ACTIVE',
       department: null,
@@ -49,9 +53,9 @@ export async function GET(
       employeeId: null,
       forcePasswordReset: profile.force_password_reset ?? false,
       isSuperAdmin: profile.role === 'SUPER_ADMIN',
-      lastLoginAt: profile.last_login_at,
+      lastLoginAt: profile.last_login_at || authUser?.last_sign_in_at || null,
       sessionRevokedAt: profile.session_revoked_at,
-      createdAt: profile.created_at,
+      createdAt: authUser?.created_at || profile.created_at,
       updatedAt: profile.updated_at,
       auditLogs: auditLogs || [],
     };
@@ -82,6 +86,34 @@ export async function PUT(
 
     const body = await request.json().catch(() => ({}));
     const { fullName, email, role, status } = body;
+
+    const callerRole = request.headers.get('x-caller-role') || body.callerRole || '';
+    const callerId = request.headers.get('x-caller-id') || body.callerId || '';
+
+    // Enforce permission:
+    // Admin can only edit details of himself, supervisors, and accountants. Cannot edit other admins or super admins.
+    if (callerRole === 'ADMIN') {
+      const { data: targetProfile } = await admin
+        .from('profiles')
+        .select('id, role')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (targetProfile) {
+        const isSelf = callerId && (callerId === targetProfile.id);
+        const isSupervisorOrAcc =
+          targetProfile.role === 'SUPERVISOR' ||
+          targetProfile.role === 'ACCOUNTANT' ||
+          targetProfile.role === 'ACCOUNT';
+
+        if (!isSelf && !isSupervisorOrAcc) {
+          return NextResponse.json(
+            { statusCode: 403, message: 'Permission denied: Admins can only edit themselves, supervisors, and accountants.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),

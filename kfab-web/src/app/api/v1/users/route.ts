@@ -32,23 +32,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let users = (profiles || []).map((p: any) => ({
-      id: p.id,
-      fullName: p.full_name || 'User',
-      email: p.email,
-      username: p.email,
-      role: p.role,
-      status: p.status || 'ACTIVE',
-      department: null,
-      designation: null,
-      employeeId: null,
-      forcePasswordReset: p.force_password_reset ?? false,
-      isSuperAdmin: p.role === 'SUPER_ADMIN',
-      lastLoginAt: p.last_login_at,
-      sessionRevokedAt: p.session_revoked_at,
-      createdAt: p.created_at || new Date().toISOString(),
-      updatedAt: p.updated_at || new Date().toISOString(),
-    }));
+    // Also fetch Auth users list to guarantee accurate last_sign_in_at and created_at
+    const { data: authData } = await admin.auth.admin.listUsers();
+    const authMap = new Map((authData?.users || []).map((u) => [u.id, u]));
+
+    let users = (profiles || []).map((p: any) => {
+      const authUser = authMap.get(p.id);
+      return {
+        id: p.id,
+        fullName: p.full_name || authUser?.user_metadata?.full_name || 'User',
+        email: p.email || authUser?.email,
+        username: p.email || authUser?.email,
+        role: p.role,
+        status: p.status || 'ACTIVE',
+        department: null,
+        designation: null,
+        employeeId: null,
+        forcePasswordReset: p.force_password_reset ?? false,
+        isSuperAdmin: p.role === 'SUPER_ADMIN',
+        lastLoginAt: p.last_login_at || authUser?.last_sign_in_at || null,
+        sessionRevokedAt: p.session_revoked_at,
+        createdAt: authUser?.created_at || p.created_at || new Date().toISOString(),
+        updatedAt: p.updated_at || new Date().toISOString(),
+      };
+    });
 
     if (search) {
       users = users.filter(

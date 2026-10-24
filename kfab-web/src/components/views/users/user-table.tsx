@@ -85,6 +85,23 @@ export function UserTable({
     u.id === "6060b3df-fec0-4772-8d3a-d32d3efd97d5" ||
     u.email.toLowerCase() === "sachinasinghofficial@gmail.com";
 
+  // Permission Rule:
+  // - Super Admin can edit details & password for ALL users.
+  // - Admin can edit himself, all supervisors, and all accountants.
+  // - Admin CANNOT edit any other admin or super admin.
+  const canManageUser = (u: ApiUserDTO) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "SUPER_ADMIN") return true;
+
+    if (currentUser.role === "ADMIN") {
+      if (isSelf(u)) return true;
+      if (u.role === "SUPERVISOR" || u.role === "ACCOUNTANT") return true;
+      return false;
+    }
+
+    return isSelf(u);
+  };
+
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-kfab overflow-hidden">
       <div className="overflow-x-auto">
@@ -218,36 +235,69 @@ export function UserTable({
                       </button>
 
                       {/* Edit User */}
-                      <button
-                        onClick={() => onOpenEdit(u)}
-                        title="Edit user details & role assignment"
-                        className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </button>
+                      {canManageUser(u) ? (
+                        <button
+                          onClick={() => onOpenEdit(u)}
+                          title="Edit user details & role assignment"
+                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+                      ) : (
+                        <span
+                          title="Admins cannot edit other Admin or Super Admin accounts"
+                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </span>
+                      )}
 
                       {/* Reset Password */}
-                      <button
-                        onClick={() => onOpenPasswordReset(u)}
-                        title="Administrative password reset override"
-                        className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
-                      >
-                        <KeyRound className="size-3.5" />
-                      </button>
+                      {canManageUser(u) ? (
+                        <button
+                          onClick={() => onOpenPasswordReset(u)}
+                          title="Administrative password reset override"
+                          className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
+                        >
+                          <KeyRound className="size-3.5" />
+                        </button>
+                      ) : (
+                        <span
+                          title="Admins cannot reset password of other Admin or Super Admin accounts"
+                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
+                        >
+                          <KeyRound className="size-3.5" />
+                        </span>
+                      )}
 
                       {/* Revoke Sessions */}
-                      <button
-                        onClick={() => onOpenRevokeSessions(u)}
-                        title="Revoke active sessions"
-                        className="p-1.5 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors cursor-pointer"
-                      >
-                        <LogOut className="size-3.5" />
-                      </button>
+                      {canManageUser(u) ? (
+                        <button
+                          onClick={() => onOpenRevokeSessions(u)}
+                          title="Revoke active sessions"
+                          className="p-1.5 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors cursor-pointer"
+                        >
+                          <LogOut className="size-3.5" />
+                        </button>
+                      ) : (
+                        <span
+                          title="Admins cannot revoke sessions of other Admin or Super Admin accounts"
+                          className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
+                        >
+                          <LogOut className="size-3.5" />
+                        </span>
+                      )}
 
                       {/* Activate / Deactivate Toggle */}
-                      {isSelf(u) || isProtectedAdmin(u) ? (
+                      {isSelf(u) || isProtectedAdmin(u) || !canManageUser(u) ? (
                         <span
-                          title="Super Admin cannot be deactivated"
+                          title={
+                            isSelf(u)
+                              ? "Cannot deactivate your own account"
+                              : !canManageUser(u)
+                              ? "Admins cannot change status of other Admin or Super Admin accounts"
+                              : "Super Admin cannot be deactivated"
+                          }
                           className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
                         >
                           <UserX className="size-3.5" />
@@ -267,9 +317,15 @@ export function UserTable({
                       )}
 
                       {/* DELETE USER ACTION */}
-                      {isSelf(u) || isProtectedAdmin(u) ? (
+                      {isSelf(u) || isProtectedAdmin(u) || !canManageUser(u) ? (
                         <span
-                          title="Primary Super Administrator cannot be deleted"
+                          title={
+                            isSelf(u)
+                              ? "Cannot delete your own account"
+                              : !canManageUser(u)
+                              ? "Admins cannot delete other Admin or Super Admin accounts"
+                              : "Primary Super Administrator cannot be deleted"
+                          }
                           className="p-1.5 text-slate-300 cursor-not-allowed inline-flex items-center"
                         >
                           <Trash2 className="size-3.5" />

@@ -38,6 +38,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Enforce role permission:
+    // Admin can edit password of himself, all supervisors, and all accountants. Cannot edit other admins or super admin.
+    const callerRole = request.headers.get('x-caller-role') || body.callerRole || '';
+    const callerId = request.headers.get('x-caller-id') || body.callerId || '';
+
+    if (callerRole === 'ADMIN') {
+      const { data: targetProfile } = await admin
+        .from('profiles')
+        .select('id, role')
+        .or(`id.eq.${targetAuthId},id.eq.${targetIdentifier}`)
+        .maybeSingle();
+
+      if (targetProfile) {
+        const isSelf = callerId && (callerId === targetProfile.id);
+        const isSupervisorOrAcc =
+          targetProfile.role === 'SUPERVISOR' ||
+          targetProfile.role === 'ACCOUNTANT' ||
+          targetProfile.role === 'ACCOUNT';
+
+        if (!isSelf && !isSupervisorOrAcc) {
+          return NextResponse.json(
+            { statusCode: 403, message: 'Permission denied: Admins can only change passwords of themselves, supervisors, and accountants.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     // 1. Authoritative password update in Supabase Auth
     if (newPassword !== undefined && newPassword !== null) {
       const pwd = String(newPassword).trim();

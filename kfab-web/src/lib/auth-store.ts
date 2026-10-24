@@ -175,6 +175,16 @@ export async function authenticateUser(usernameInput: string, passwordInput: str
           throw new Error('This account has been deactivated. Contact your Super Administrator.');
         }
 
+        const nowIso = new Date().toISOString();
+        try {
+          await supabase
+            .from('profiles')
+            .update({ last_login_at: nowIso, updated_at: nowIso })
+            .eq('id', data.user.id);
+        } catch {
+          // non-blocking
+        }
+
         // Sync into stored users
         const existingIdx = users.findIndex(
           (u) => u.id === data.user.id || u.username.toLowerCase() === supabaseUser.username.toLowerCase()

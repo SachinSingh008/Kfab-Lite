@@ -167,6 +167,15 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
     headers.set('Authorization', `Bearer ${token}`);
   }
 
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('kfab_auth_session_v6') : null;
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user?.role) headers.set('x-caller-role', user.role);
+      if (user?.id) headers.set('x-caller-id', user.id);
+    }
+  } catch {}
+
   const response = await fetch(endpoint, {
     ...options,
     headers,
