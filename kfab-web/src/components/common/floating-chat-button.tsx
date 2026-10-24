@@ -19,14 +19,17 @@ import { AppUser, AppRole } from "@/lib/auth-store";
 import {
   ChatGroup,
   ChatMessage,
+  ChatMember,
   TargetScope,
   getStoredChatGroups,
+  saveStoredChatGroups,
   getStoredChatMessages,
   saveStoredChatMessages,
   canUserSeeMessage,
   markMessagesAsRead,
   getUnreadMessagesCount,
   SAMPLE_CHAT_IMAGES,
+  DEFAULT_FALLBACK_GROUP,
 } from "@/lib/chat-store";
 
 interface FloatingChatButtonProps {
@@ -98,17 +101,17 @@ export function FloatingChatButton({
     }
   }, [messages, isOpen, activeGroupId]);
 
-  const activeGroup = groups.find((g) => g.id === activeGroupId) || groups[0];
+  const activeGroup = groups.find((g) => g.id === activeGroupId) || groups[0] || DEFAULT_FALLBACK_GROUP;
   const isSuperAdmin = currentUser.role === "SUPER_ADMIN";
   const isAdmin = currentUser.role === "ADMIN" || isSuperAdmin;
-  const currentMember = activeGroup?.members.find((m) => m.userId === currentUser.id);
+  const currentMember = activeGroup?.members?.find((m: ChatMember) => m.userId === currentUser.id);
   const canSendWithTargeting =
     isAdmin || (currentMember && (currentMember.isGroupLead || currentMember.canViewAll));
 
   // Filter messages for current user
   const visibleMessages = messages.filter((m) => {
-    if (m.groupId !== activeGroup?.id) return false;
-    return canUserSeeMessage(m, currentUser.id, currentUser.role, activeGroup.members);
+    if (m.groupId !== activeGroup.id) return false;
+    return canUserSeeMessage(m, currentUser.id, currentUser.role, activeGroup.members || DEFAULT_FALLBACK_GROUP.members);
   });
 
   // When chat window is opened, mark visible messages as read
@@ -210,12 +213,19 @@ export function FloatingChatButton({
 
     if (!text && !image) return;
 
+    const targetGroup = activeGroup || groups[0] || DEFAULT_FALLBACK_GROUP;
+    if (groups.length === 0) {
+      setGroups([targetGroup]);
+      saveStoredChatGroups([targetGroup]);
+      setActiveGroupId(targetGroup.id);
+    }
+
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      groupId: activeGroup.id,
+      groupId: targetGroup.id,
       senderId: currentUser.id,
       senderName: currentUser.name,
       senderUsername: currentUser.username,
@@ -262,10 +272,10 @@ export function FloatingChatButton({
     e.target.value = "";
   };
 
-  const accountantsInGroup =
-    activeGroup?.members.filter((m) => m.role === "ACCOUNTANT") || [];
-  const supervisorsInGroup =
-    activeGroup?.members.filter((m) => m.role === "SUPERVISOR") || [];
+  const accountantsInGroup: ChatMember[] =
+    (activeGroup?.members || []).filter((m: ChatMember) => m.role === "ACCOUNTANT");
+  const supervisorsInGroup: ChatMember[] =
+    (activeGroup?.members || []).filter((m: ChatMember) => m.role === "SUPERVISOR");
 
   return (
     <>
@@ -693,36 +703,16 @@ export function FloatingChatButton({
         <button
           type="button"
           onClick={() => {
-            if (isFullChatActive) {
-              setIsOpen((prev) => !prev);
-            } else {
-              setIsOpen((prev) => !prev);
-            }
+            onOpenFullChat();
           }}
           className={`size-14 md:size-16 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 transform hover:scale-105 active:scale-95 ${theme.bg} ${theme.text} ${theme.border} border-2 ${theme.glow} relative group`}
-          title={`Open Team Chat (${currentUser.role.replace("_", " ")})`}
+          title={`Team Chat - Feature Under Process`}
         >
-          {/* Animated pulse indicator badge — only shown when there are actual unread messages */}
-          {unreadCount > 0 && !isOpen && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span
-                className={`relative inline-flex rounded-full h-5 min-w-5 px-1.5 text-[10px] font-extrabold items-center justify-center shadow-md border border-white/40 ${theme.badgeBg}`}
-              >
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            </span>
-          )}
-
-          {isOpen ? (
-            <X className="size-7 transition-transform group-hover:rotate-90 duration-200" />
-          ) : (
-            <MessageSquare className="size-7" />
-          )}
+          <MessageSquare className="size-7" />
 
           {/* Quick Tooltip */}
           <span className="absolute right-full mr-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            💬 Quick Chat ({currentUser.role.replace("_", " ")})
+            🚧 Chats Tab (Under Process)
           </span>
         </button>
       </div>

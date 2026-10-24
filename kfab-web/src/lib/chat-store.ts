@@ -58,11 +58,83 @@ export const SAMPLE_CHAT_IMAGES = {
     "https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?auto=format&fit=crop&w=800&q=80",
 };
 
-// Clean slate: no pre-seeded chat groups
-export const INITIAL_CHAT_GROUPS: ChatGroup[] = [];
+export const DEFAULT_FALLBACK_GROUP: ChatGroup = {
+  id: "grp-plant-general",
+  name: "General Plant Operations",
+  description: "Shop floor, fabrication bay & site communications channel",
+  avatar: "🏭",
+  createdBy: "u0000000-0000-0000-0000-000000000001",
+  createdAt: "2026-10-01T00:00:00.000Z",
+  members: [
+    {
+      userId: "u0000000-0000-0000-0000-000000000001",
+      name: "Ritesh (Super Admin)",
+      username: "superadmin",
+      role: "SUPER_ADMIN",
+      isGroupLead: true,
+      canViewAll: true,
+      joinedAt: "2026-10-01T00:00:00.000Z",
+    },
+    {
+      userId: "u0000000-0000-0000-0000-000000000002",
+      name: "Plant Admin",
+      username: "admin",
+      role: "ADMIN",
+      isGroupLead: true,
+      canViewAll: true,
+      joinedAt: "2026-10-01T00:00:00.000Z",
+    },
+    {
+      userId: "u0000000-0000-0000-0000-000000000003",
+      name: "Ajay Verma (Bay 1)",
+      username: "supervisor",
+      role: "SUPERVISOR",
+      isGroupLead: false,
+      canViewAll: false,
+      joinedAt: "2026-10-01T00:00:00.000Z",
+    },
+    {
+      userId: "u0000000-0000-0000-0000-000000000004",
+      name: "Commercial Accounts",
+      username: "accountant",
+      role: "ACCOUNTANT",
+      isGroupLead: false,
+      canViewAll: false,
+      joinedAt: "2026-10-01T00:00:00.000Z",
+    },
+  ],
+};
 
-// Clean slate: no pre-seeded chat messages
-export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [];
+export const INITIAL_CHAT_GROUPS: ChatGroup[] = [DEFAULT_FALLBACK_GROUP];
+
+export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    id: "msg-sample-01",
+    groupId: "grp-plant-general",
+    senderId: "u0000000-0000-0000-0000-000000000003",
+    senderName: "Ajay Verma (Bay 1)",
+    senderUsername: "supervisor",
+    senderRole: "SUPERVISOR",
+    text: "Shift A started on schedule. 25T crane calibration completed and box girder fit-up in progress.",
+    timestamp: "2026-10-04T08:15:00.000Z",
+    timeString: "08:15 AM",
+    targetScope: "ALL",
+    status: "DELIVERED",
+  },
+  {
+    id: "msg-sample-02",
+    groupId: "grp-plant-general",
+    senderId: "u0000000-0000-0000-0000-000000000001",
+    senderName: "Ritesh (Super Admin)",
+    senderUsername: "superadmin",
+    senderRole: "SUPER_ADMIN",
+    text: "Excellent. Please ensure ultrasonic NDT inspection certificates are uploaded before midnight date lock.",
+    timestamp: "2026-10-04T08:22:00.000Z",
+    timeString: "08:22 AM",
+    targetScope: "ALL",
+    status: "DELIVERED",
+  },
+];
 
 // ============================================================================
 // Core Visibility Scoping Matrix Function

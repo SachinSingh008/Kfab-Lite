@@ -9,6 +9,7 @@ class AttendanceCard extends StatelessWidget {
   final AttendanceRecord? record;
   final bool isHistoricalDate;
   final void Function(AttendanceStatus) onStatusSelected;
+  final void Function(double, String?) onOvertimeUpdated;
   final VoidCallback onRequestCorrection;
 
   const AttendanceCard({
@@ -17,28 +18,106 @@ class AttendanceCard extends StatelessWidget {
     this.record,
     this.isHistoricalDate = false,
     required this.onStatusSelected,
+    required this.onOvertimeUpdated,
     required this.onRequestCorrection,
   });
+
+  void _showOvertimeDialog(BuildContext context) {
+    double hours = record?.overtimeHours ?? 0.0;
+    String remarks = record?.remarks ?? '';
+    final ctrl = TextEditingController(text: hours > 0 ? hours.toString() : '');
+    final remCtrl = TextEditingController(text: remarks);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Edit Overtime — ${employee.name}',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Overtime Hours (e.g. 1.5, 2.0, 4.0)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: ctrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                hintText: '0.0',
+                suffixText: 'hours',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              onChanged: (val) => hours = double.tryParse(val) ?? 0.0,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Remark (Optional)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: remCtrl,
+              decoration: InputDecoration(
+                hintText: 'e.g. Urgent fabrication shift',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              onChanged: (val) => remarks = val,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.slateDark,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onOvertimeUpdated(hours, remarks.trim().isEmpty ? null : remarks.trim());
+            },
+            child: const Text('Save Overtime'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final status = record?.status ?? AttendanceStatus.notMarked;
     final isPresent = status == AttendanceStatus.present;
     final isAbsent = status == AttendanceStatus.absent;
+    final isOd = status == AttendanceStatus.od;
+    final otHours = record?.overtimeHours ?? 0.0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isPresent
-              ? AppTheme.successEmerald.withValues(alpha: 0.5)
+              ? AppTheme.successEmerald.withValues(alpha: 0.6)
               : isAbsent
-                  ? AppTheme.dangerCrimson.withValues(alpha: 0.5)
-                  : AppTheme.slateSubtle,
-          width: isPresent || isAbsent ? 1.5 : 1.0,
+                  ? AppTheme.dangerCrimson.withValues(alpha: 0.6)
+                  : isOd
+                      ? const Color(0xFF7C3AED).withValues(alpha: 0.6)
+                      : AppTheme.slateSubtle,
+          width: isPresent || isAbsent || isOd ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxStyle.subtle(),
@@ -47,7 +126,7 @@ class AttendanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Name, Designation & Shift
+          // Header: Name, Code & Designation
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -83,7 +162,9 @@ class AttendanceCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '(${employee.id})',
+                          employee.employeeCode.isNotEmpty
+                              ? '(${employee.employeeCode})'
+                              : '(${employee.id.substring(0, 7)})',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -103,21 +184,42 @@ class AttendanceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (record?.punchTime != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    record!.punchTime!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF475569),
+
+              // Overtime Tag & Edit Action
+              if (otHours > 0)
+                GestureDetector(
+                  onTap: isHistoricalDate ? null : () => _showOvertimeDialog(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEDD5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.access_time_filled, size: 11, color: Color(0xFFC2410C)),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${otHours}h OT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFC2410C),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                )
+              else if (!isHistoricalDate)
+                IconButton(
+                  icon: const Icon(Icons.more_time, size: 18, color: AppTheme.textMuted),
+                  tooltip: 'Add Overtime',
+                  onPressed: () => _showOvertimeDialog(context),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
                 ),
             ],
           ),
@@ -172,10 +274,10 @@ class AttendanceCard extends StatelessWidget {
           else
             Row(
               children: [
-                // Present Button (Large touch target >= 48dp)
+                // 1. PRESENT Button (Green)
                 Expanded(
                   child: SizedBox(
-                    height: 48,
+                    height: 44,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isPresent
@@ -193,6 +295,7 @@ class AttendanceCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
@@ -200,24 +303,24 @@ class AttendanceCard extends StatelessWidget {
                       },
                       icon: Icon(
                         isPresent ? Icons.check_circle : Icons.check,
-                        size: 18,
+                        size: 16,
                       ),
                       label: const Text(
                         'PRESENT',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Absent Button (Large touch target >= 48dp)
+                const SizedBox(width: 6),
+
+                // 2. ABSENT Button (Red)
                 Expanded(
                   child: SizedBox(
-                    height: 48,
+                    height: 44,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isAbsent
@@ -235,6 +338,7 @@ class AttendanceCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
@@ -242,14 +346,56 @@ class AttendanceCard extends StatelessWidget {
                       },
                       icon: Icon(
                         isAbsent ? Icons.cancel : Icons.close,
-                        size: 18,
+                        size: 16,
                       ),
                       label: const Text(
                         'ABSENT',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                // 3. OD (On Duty) Button (Purple / Distinct third state)
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isOd
+                            ? const Color(0xFF7C3AED)
+                            : const Color(0xFFF5F3FF),
+                        foregroundColor:
+                            isOd ? Colors.white : const Color(0xFF6D28D9),
+                        elevation: 0,
+                        side: BorderSide(
+                          color: isOd
+                              ? const Color(0xFF7C3AED)
+                              : const Color(0xFFDDD6FE),
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        onStatusSelected(AttendanceStatus.od);
+                      },
+                      icon: Icon(
+                        isOd ? Icons.business_center : Icons.work_outline,
+                        size: 16,
+                      ),
+                      label: const Text(
+                        'OD',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

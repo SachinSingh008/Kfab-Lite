@@ -418,10 +418,10 @@ class KfabNavigationDrawer extends StatelessWidget {
                     icon: Icons.chat_bubble_outline,
                     activeIcon: Icons.chat_bubble,
                     title: 'Team Chat & Channels',
-                    subtitle: 'WhatsApp-style photo & role scoped chat',
+                    subtitle: '🚧 This feature is under process',
                     isSelected: currentIndex == 4,
-                    badge: 'WhatsApp',
-                    badgeColor: const Color(0xFF16A34A),
+                    badge: 'Under Process',
+                    badgeColor: const Color(0xFFF59E0B),
                     onTap: () {
                       Navigator.pop(context);
                       onSelectTab(4);
@@ -521,6 +521,130 @@ class KfabNavigationDrawer extends StatelessWidget {
                         ),
                       );
                     },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Divider(height: 1),
+                  ),
+
+                  // Demo Sample Data Switcher
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'DEMO SAMPLE DATA',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF94A3B8),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: store.isSampleDataActive
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: store.isSampleDataActive
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFFCBD5E1),
+                            ),
+                          ),
+                          child: Text(
+                            store.isSampleDataActive ? 'SAMPLE ACTIVE' : 'CLEAN SLATE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: store.isSampleDataActive
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        final newState = !store.isSampleDataActive;
+                        store.toggleSampleData(newState);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              newState
+                                  ? 'Loaded realistic plant sample data across all tabs'
+                                  : 'Wiped all demo sample data. Clean slate mode active.',
+                            ),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: newState ? const Color(0xFF0F766E) : const Color(0xFF475569),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: store.isSampleDataActive
+                              ? const Color(0xFFFFFBEB)
+                              : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: store.isSampleDataActive
+                                ? const Color(0xFFFCD34D)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              store.isSampleDataActive ? Icons.auto_awesome : Icons.cleaning_services_outlined,
+                              color: store.isSampleDataActive ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                store.isSampleDataActive
+                                    ? 'Tap to Clean All Sample Data'
+                                    : 'Tap to Load Sample Data',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: store.isSampleDataActive ? const Color(0xFF92400E) : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                            Switch.adaptive(
+                              value: store.isSampleDataActive,
+                              activeTrackColor: const Color(0xFFD97706),
+                              onChanged: (val) {
+                                store.toggleSampleData(val);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      val
+                                          ? 'Loaded realistic plant sample data across all tabs'
+                                          : 'Wiped all demo sample data. Clean slate mode active.',
+                                    ),
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: val ? const Color(0xFF0F766E) : const Color(0xFF475569),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
 
                   const Padding(

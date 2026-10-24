@@ -60,6 +60,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/android_bot_mechanic.png
     - assets/logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see

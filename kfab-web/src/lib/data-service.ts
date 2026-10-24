@@ -335,4 +335,31 @@ export const DataService = {
   getTransactions() {
     return cachedTransactions;
   },
+
+  /**
+   * Populate DataService caches with sample demonstration data
+   */
+  loadSampleData(sampleStock: any[], sampleTransactions: any[], sampleWorkers: any[], sampleLedger: StockLedgerEntry[]) {
+    cachedMaterials = [...sampleStock];
+    cachedTransactions = [...sampleTransactions];
+    cachedWorkers = [...sampleWorkers];
+    inMemoryLedgerEntries = [...sampleLedger];
+  },
+
+  /**
+   * Remove all demo sample data - clean production slate
+   */
+  clearSampleData() {
+    cachedMaterials = [];
+    cachedTransactions = [];
+    cachedWorkers = [];
+    inMemoryLedgerEntries = [];
+  },
+
+  /**
+   * Check if sample demo data is active
+   */
+  isSampleDataLoaded(): boolean {
+    return inMemoryLedgerEntries.length > 0 || cachedMaterials.length > 0;
+  },
 };

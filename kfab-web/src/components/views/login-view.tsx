@@ -7,11 +7,9 @@ import {
   EyeOff,
   Lock,
   User,
-  KeyRound,
   AlertCircle,
   Loader2,
   ArrowRight,
-  X,
   CheckCircle2,
 } from "lucide-react";
 import { AppUser, authenticateUser, getStoredUsers } from "@/lib/auth-store";
@@ -28,15 +26,19 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  // Password Assistance Dialog
-  const [forgotOpen, setForgotOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotDone, setForgotDone] = useState(false);
+
+
+  // Auto-select superadmin on initial mount
+  useEffect(() => {
+    handleRoleSelect("superadmin");
+  }, []);
 
   const handleRoleSelect = (roleKey: "superadmin" | "admin" | "supervisor" | "accountant") => {
     setSelectedRole(roleKey);
     setError(null);
+    setInfoMessage(null);
     const users = getStoredUsers();
 
     const roleMap: Record<string, AppUser["role"]> = {
@@ -51,6 +53,8 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
 
     if (matchedUser) {
       setUsername(matchedUser.username);
+    } else if (roleKey === "superadmin") {
+      setUsername("sachinasinghofficial@gmail.com");
     }
     setPassword("");
   };
@@ -62,6 +66,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
       return;
     }
     setError(null);
+    setInfoMessage(null);
     setIsLoading(true);
 
     try {
@@ -74,10 +79,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotDone(true);
-  };
+
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-12 bg-white">
@@ -244,22 +246,9 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotDone(false);
-                    setForgotEmail(username || "");
-                    setForgotOpen(true);
-                  }}
-                  className="text-xs text-slate-500 hover:text-[#0F172A] font-semibold transition-colors cursor-pointer"
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="size-4 absolute left-3.5 top-3.5 text-slate-400" />
                 <input
@@ -295,6 +284,14 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
               </label>
             </div>
 
+            {/* Success / Info Banner */}
+            {infoMessage && (
+              <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-start gap-2.5 text-xs text-emerald-900 animate-in fade-in">
+                <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-emerald-600" />
+                <span className="font-semibold">{infoMessage}</span>
+              </div>
+            )}
+
             {/* Error Banner */}
             {error && (
               <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 flex items-start gap-2.5 text-xs text-rose-800">
@@ -329,88 +326,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
           <p>&copy; {new Date().getFullYear()} KFAB Infra Projects Pvt. Ltd. All rights reserved.</p>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {forgotOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 relative text-[#0F172A]">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-lg bg-slate-100 text-[#0F172A] flex items-center justify-center">
-                  <KeyRound className="size-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-[#0F172A]">Password Assistance</h4>
-                  <p className="text-[11px] text-slate-500">Recovery instructions dispatch</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setForgotOpen(false)}
-                className="text-slate-400 hover:text-[#0F172A] cursor-pointer"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            {!forgotDone ? (
-              <form onSubmit={handleForgotSubmit} className="mt-4 space-y-4 text-xs">
-                <div>
-                  <label className="block font-semibold text-[#0F172A] mb-1">
-                    Corporate Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="name@kfab.in"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-[#0F172A] font-mono focus:bg-white focus:ring-1 focus:ring-[#0F172A] focus:outline-none"
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Enter your registered work email to receive password reset instructions, or contact your Super Administrator.
-                </p>
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setForgotOpen(false)}
-                    className="px-3.5 py-2 border border-slate-300 text-slate-600 rounded-lg font-semibold hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-lg font-bold shadow-xs cursor-pointer"
-                  >
-                    Send Reset Link
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="mt-4 space-y-4 text-xs">
-                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800">
-                  <p className="font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
-                    Reset Link Dispatched
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-600">
-                    If an active account exists for <strong className="text-slate-900">{forgotEmail}</strong>, instructions have been sent.
-                  </p>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setForgotOpen(false)}
-                    className="px-4 py-1.5 bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-lg font-bold cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+

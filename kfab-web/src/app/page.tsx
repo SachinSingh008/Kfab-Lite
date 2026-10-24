@@ -31,6 +31,7 @@ import { ReportsView } from "@/components/views/reports-view";
 import { SettingsView } from "@/components/views/settings-view";
 import { ChatView } from "@/components/views/chat-view";
 import { LogsView } from "@/components/views/logs-view";
+import { InventoryView } from "@/components/views/inventory-view";
 
 // Supervisor Operations Views (from Kfab360)
 import { DailyReportsView } from "@/components/views/daily-reports-view";
@@ -39,6 +40,22 @@ import { MachinesView } from "@/components/views/machines-view";
 import { QaqcView } from "@/components/views/qaqc-view";
 import { IssuesView } from "@/components/views/issues-view";
 import { RequirementsView } from "@/components/views/requirements-view";
+
+// Authoritative Sample Demonstration Data & DataService
+import {
+  SAMPLE_WORKERS,
+  SAMPLE_STOCK,
+  SAMPLE_TRANSACTIONS,
+  SAMPLE_DAILY_REPORTS,
+  SAMPLE_PRODUCTION_LOGS,
+  SAMPLE_MACHINES,
+  SAMPLE_QAQC,
+  SAMPLE_ISSUES,
+  SAMPLE_REQUIREMENTS,
+  SAMPLE_ACCOUNTS,
+  SAMPLE_LEDGER_ENTRIES,
+} from "@/lib/sample-data";
+import { DataService } from "@/lib/data-service";
 
 const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: string }> = {
   dashboard: {
@@ -55,6 +72,16 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
     title: "Team Channels & Secure Role-Scoped Messaging",
     subtitle: "WhatsApp-style enterprise chat with photo attachments, Super Admin group management, and granular role visibility isolation.",
     category: "Communications",
+  },
+  inventory: {
+    title: "Inventory & Material Management Master",
+    subtitle: "Shop floor consumables, tackles, machinery, power tools, clothes, safety gear, and complete cost telemetry.",
+    category: "Store & Inventory",
+  },
+  "inventory-workbook": {
+    title: "Inventory Live Spreadsheet Workspace",
+    subtitle: "Excel-compatible live ledger, fast multi-cell copy-paste, cell editing, and batch ledger reconciliation.",
+    category: "Files & Workbooks",
   },
   "daily-reports": {
     title: "Daily Shift Operations & Site Reports (DPR)",
@@ -150,24 +177,64 @@ export default function KfabBasicApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Clean empty collections (zero mock residual data)
-  const [workers, setWorkers] = useState<WorkerRecord[]>([]);
-  const [stock, setStock] = useState<StockMaterial[]>([]);
-  const [transactions, setTransactions] = useState<SupplyTransaction[]>([]);
+  // Easily Removable Sample Demo Data State
+  const [sampleDataActive, setSampleDataActive] = useState<boolean>(true);
+  const [workers, setWorkers] = useState<WorkerRecord[]>(SAMPLE_WORKERS);
+  const [stock, setStock] = useState<StockMaterial[]>(SAMPLE_STOCK);
+  const [transactions, setTransactions] = useState<SupplyTransaction[]>(SAMPLE_TRANSACTIONS);
 
   useEffect(() => {
     const session = getStoredSession();
     if (session) {
       setCurrentUser(session);
     }
+
+    // Hydrate sample data mode from localStorage
+    const storedSamplePref = typeof window !== "undefined" ? localStorage.getItem("kfab360_sample_data_active") : null;
+    const isSampleActive = storedSamplePref !== null ? storedSamplePref === "true" : true;
+    setSampleDataActive(isSampleActive);
+
+    if (isSampleActive) {
+      setWorkers(SAMPLE_WORKERS);
+      setStock(SAMPLE_STOCK);
+      setTransactions(SAMPLE_TRANSACTIONS);
+      DataService.loadSampleData(SAMPLE_STOCK, SAMPLE_TRANSACTIONS, SAMPLE_WORKERS, SAMPLE_LEDGER_ENTRIES);
+    } else {
+      setWorkers([]);
+      setStock([]);
+      setTransactions([]);
+      DataService.clearSampleData();
+    }
+
     if (typeof window !== "undefined") {
       if (window.location.pathname.startsWith("/logs") || window.location.search.includes("tab=logs")) {
         setCurrentTab("logs");
       } else if (window.location.pathname.startsWith("/reports") || window.location.search.includes("tab=reports")) {
         setCurrentTab("reports");
+      } else if (window.location.pathname.startsWith("/inventory") || window.location.search.includes("tab=inventory")) {
+        setCurrentTab("inventory");
       }
     }
   }, []);
+
+  const handleToggleSampleData = () => {
+    const nextState = !sampleDataActive;
+    setSampleDataActive(nextState);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("kfab360_sample_data_active", String(nextState));
+    }
+    if (nextState) {
+      setWorkers(SAMPLE_WORKERS);
+      setStock(SAMPLE_STOCK);
+      setTransactions(SAMPLE_TRANSACTIONS);
+      DataService.loadSampleData(SAMPLE_STOCK, SAMPLE_TRANSACTIONS, SAMPLE_WORKERS, SAMPLE_LEDGER_ENTRIES);
+    } else {
+      setWorkers([]);
+      setStock([]);
+      setTransactions([]);
+      DataService.clearSampleData();
+    }
+  };
 
   const handleSelectTab = (tab: NavTab) => {
     setCurrentTab(tab);
@@ -176,6 +243,8 @@ export default function KfabBasicApp() {
         window.history.pushState(null, "", "/logs");
       } else if (tab === "reports" || tab === "reports-progress" || tab === "reports-details") {
         window.history.pushState(null, "", "/reports");
+      } else if (tab === "inventory" || tab === "inventory-workbook") {
+        window.history.pushState(null, "", "/inventory");
       } else {
         window.history.pushState(null, "", "/");
       }
@@ -276,6 +345,31 @@ export default function KfabBasicApp() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Easily Removable Sample Demo Data Mode Toggle Button */}
+            <button
+              onClick={handleToggleSampleData}
+              title={
+                sampleDataActive
+                  ? "Click to remove all sample demo records across all tabs"
+                  : "Click to load sample demonstration data across all tabs"
+              }
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border shadow-xs cursor-pointer ${
+                sampleDataActive
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400 hover:bg-amber-500/25"
+                  : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              <Sparkles className={`size-3.5 ${sampleDataActive ? "text-amber-500 fill-amber-500 animate-pulse" : "text-slate-400"}`} />
+              <span>{sampleDataActive ? "Demo Data: Active" : "Clean Slate: Empty"}</span>
+              <span
+                className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                  sampleDataActive ? "bg-amber-500 text-white" : "bg-slate-300 text-slate-700"
+                }`}
+              >
+                {sampleDataActive ? "Remove" : "Load"}
+              </span>
+            </button>
+
             {/* Dynamic Role Badge */}
             <div
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border transition-colors shadow-xs"
@@ -386,8 +480,9 @@ export default function KfabBasicApp() {
           {currentTab === "dashboard" && (
             <DashboardView
               currentUser={currentUser}
-              stockMaterials={stock}
-              supplyTransactions={transactions}
+              stockMaterials={sampleDataActive ? stock : []}
+              supplyTransactions={sampleDataActive ? transactions : []}
+              sampleDataActive={sampleDataActive}
               onNavigateTab={(tab) => setCurrentTab(tab as NavTab)}
             />
           )}
@@ -397,32 +492,35 @@ export default function KfabBasicApp() {
           )}
 
           {currentTab === "chat" && (
-            <ChatView currentUser={currentUser} />
+            <ChatView
+              currentUser={currentUser}
+              onBackToDashboard={() => setCurrentTab("dashboard")}
+            />
           )}
 
           {/* Supervisor Operations Views (Matching Kfab360) */}
           {currentTab === "daily-reports" && (
-            <DailyReportsView />
+            <DailyReportsView reports={sampleDataActive ? SAMPLE_DAILY_REPORTS : []} />
           )}
 
           {currentTab === "production" && (
-            <ProductionView />
+            <ProductionView logs={sampleDataActive ? SAMPLE_PRODUCTION_LOGS : []} />
           )}
 
           {currentTab === "machines" && (
-            <MachinesView />
+            <MachinesView machines={sampleDataActive ? SAMPLE_MACHINES : []} />
           )}
 
           {currentTab === "qaqc" && (
-            <QaqcView />
+            <QaqcView records={sampleDataActive ? SAMPLE_QAQC : []} />
           )}
 
           {currentTab === "issues" && (
-            <IssuesView />
+            <IssuesView issues={sampleDataActive ? SAMPLE_ISSUES : []} />
           )}
 
           {currentTab === "requirements" && (
-            <RequirementsView />
+            <RequirementsView reqs={sampleDataActive ? SAMPLE_REQUIREMENTS : []} />
           )}
 
           {currentTab === "users" && (
@@ -431,14 +529,23 @@ export default function KfabBasicApp() {
 
           {currentTab === "attendance" && (
             <AttendanceView
-              workers={workers}
+              workers={sampleDataActive ? workers : []}
               searchTerm={searchTerm}
+              currentUser={currentUser}
             />
+          )}
+
+          {currentTab === "inventory" && (
+            <InventoryView currentUser={currentUser} initialOpenExcel={false} sampleDataActive={sampleDataActive} />
+          )}
+
+          {currentTab === "inventory-workbook" && (
+            <InventoryView currentUser={currentUser} initialOpenExcel={true} sampleDataActive={sampleDataActive} />
           )}
 
           {currentTab === "stock" && (
             <StockView
-              stockMaterials={stock}
+              stockMaterials={sampleDataActive ? stock : []}
               searchTerm={searchTerm}
               onOpenInward={() => setCurrentTab("supplies")}
             />
@@ -446,13 +553,14 @@ export default function KfabBasicApp() {
 
           {currentTab === "ledger" && (
             <LedgerView
+              key={sampleDataActive ? "sample-ledger" : "clean-ledger"}
               currentUser={currentUser}
             />
           )}
 
           {currentTab === "supplies" && (
             <SuppliesView
-              supplyTransactions={transactions}
+              supplyTransactions={sampleDataActive ? transactions : []}
               searchTerm={searchTerm}
               onOpenInward={() => { }}
             />
@@ -461,12 +569,13 @@ export default function KfabBasicApp() {
           {currentTab === "accounts" && (
             <AccountsView
               currentUser={currentUser}
+              records={sampleDataActive ? SAMPLE_ACCOUNTS : []}
             />
           )}
 
           {currentTab === "employees" && (
             <EmployeesView
-              workers={workers}
+              workers={sampleDataActive ? workers : []}
               searchTerm={searchTerm}
             />
           )}

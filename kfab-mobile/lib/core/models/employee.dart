@@ -1,5 +1,6 @@
 class Employee {
   final String id;
+  final String employeeCode;
   final String name;
   final String designation;
   final String department;
@@ -9,6 +10,7 @@ class Employee {
 
   const Employee({
     required this.id,
+    this.employeeCode = '',
     required this.name,
     required this.designation,
     required this.department,
@@ -20,6 +22,7 @@ class Employee {
   factory Employee.fromJson(Map<String, dynamic> json) {
     return Employee(
       id: json['id'] as String,
+      employeeCode: json['employee_code'] as String? ?? json['employeeCode'] as String? ?? '',
       name: json['name'] as String,
       designation: json['designation'] as String? ?? 'Fabrication Worker',
       department: json['department'] as String? ?? 'Shop Floor',
@@ -32,6 +35,7 @@ class Employee {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'employee_code': employeeCode,
       'name': name,
       'designation': designation,
       'department': department,

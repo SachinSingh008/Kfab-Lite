@@ -73,6 +73,8 @@ BEGIN
         RAISE EXCEPTION 'Action rejected: Cannot demote or deactivate the last active SUPER_ADMIN in the system.';
       END IF;
     END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
   END IF;
   RETURN NEW;
 END;

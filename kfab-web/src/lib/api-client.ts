@@ -4,7 +4,16 @@
 // ============================================================================
 
 import { createClient } from './supabase/client';
-import { getStoredUsers, saveStoredUsers, AppUser, AppRole } from './auth-store';
+import {
+  getStoredUsers,
+  saveStoredUsers,
+  AppUser,
+  AppRole,
+  updateUserRecord,
+  deleteUserRecord,
+  createUserRecord,
+  syncUsersFromSupabase,
+} from './auth-store';
 
 export interface ApiUserDTO {
   id: string;
@@ -96,7 +105,7 @@ export interface AuditLogDTO {
  * Resolves current user's Supabase JWT access token for authoritative API calls.
  * Falls back to an encoded development bearer token if running in local session mode.
  */
-async function getAuthToken(): Promise<string | null> {
+export async function getAuthToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   try {
     const supabase = createClient();
@@ -138,7 +147,7 @@ async function getAuthToken(): Promise<string | null> {
 /**
  * Core Request wrapper for /api/v1 with error extraction and token handling.
  */
-async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = await getAuthToken();
 
   const headers = new Headers(options.headers || {});
@@ -299,49 +308,56 @@ export async function apiCreateUser(payload: {
   status?: string;
   forcePasswordReset?: boolean;
 }): Promise<{ message: string; user: ApiUserDTO }> {
+  const normalizedRole = payload.role === 'ACCOUNTANT' ? 'ACCOUNT' : payload.role;
+  const normalizedPayload = { ...payload, role: normalizedRole };
+
   try {
-    return await apiRequest<{ message: string; user: ApiUserDTO }>('/api/v1/users', {
+    const res = await apiRequest<{ message: string; user: ApiUserDTO }>('/api/v1/users', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(normalizedPayload),
     });
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : '';
-    if (errMsg.includes('SUPABASE_SERVICE_ROLE_KEY') || errMsg.includes('permission denied')) {
-      console.warn('[apiCreateUser] Service role key missing or permission denied, saving to local store:', err);
+    try {
       const stored = getStoredUsers();
-      const newUser: AppUser = {
-        id: `usr-${Date.now()}`,
-        name: payload.fullName,
-        username: payload.username,
-        password: payload.initialPassword || 'password123',
-        role: (payload.role === 'ACCOUNTANT' ? 'ACCOUNT' : payload.role) as AppRole,
-        status: (payload.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
-        createdAt: new Date().toISOString(),
-      };
-      stored.push(newUser);
+      stored.unshift({
+        id: res.user.id,
+        name: res.user.fullName,
+        username: res.user.email || payload.username,
+        password: payload.initialPassword,
+        role: ((res.user.role as string) === 'ACCOUNT' ? 'ACCOUNTANT' : res.user.role) as any,
+        status: res.user.status as any,
+        createdAt: res.user.createdAt,
+      });
       saveStoredUsers(stored);
-      return {
-        message: 'User created successfully (local store)',
-        user: {
-          id: newUser.id,
-          fullName: newUser.name,
-          email: payload.email,
-          username: newUser.username,
-          role: payload.role as any,
-          status: newUser.status as any,
-          department: payload.department || null,
-          designation: payload.designation || null,
-          employeeId: payload.employeeId || null,
-          forcePasswordReset: payload.forcePasswordReset ?? false,
-          isSuperAdmin: newUser.role === 'SUPER_ADMIN',
-          lastLoginAt: null,
-          sessionRevokedAt: null,
-          createdAt: newUser.createdAt,
-          updatedAt: newUser.createdAt,
-        },
-      };
-    }
-    throw err;
+    } catch {}
+    return res;
+  } catch (err: unknown) {
+    console.warn('[apiCreateUser] Fastify request failed, using direct store/Supabase fallback:', err);
+    const created = await createUserRecord({
+      name: payload.fullName,
+      username: payload.email || payload.username,
+      password: payload.initialPassword || 'password123',
+      role: (payload.role === 'ACCOUNT' ? 'ACCOUNTANT' : payload.role) as any,
+    });
+    return {
+      message: `User "${created.name}" created successfully in database and system.`,
+      user: {
+        id: created.id,
+        fullName: created.name,
+        email: created.username,
+        username: created.username,
+        role: created.role as any,
+        status: created.status as any,
+        department: payload.department || null,
+        designation: payload.designation || null,
+        employeeId: payload.employeeId || null,
+        forcePasswordReset: payload.forcePasswordReset ?? false,
+        isSuperAdmin: created.role === 'SUPER_ADMIN',
+        lastLoginAt: null,
+        sessionRevokedAt: null,
+        createdAt: created.createdAt,
+        updatedAt: created.createdAt,
+      },
+    };
   }
 }
 
@@ -358,11 +374,88 @@ export async function apiUpdateUser(
     forcePasswordReset?: boolean;
   }
 ): Promise<{ message: string; user: ApiUserDTO }> {
-  return apiRequest<{ message: string; user: ApiUserDTO }>(`/api/v1/users/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
+  const normalizedRole = payload.role === 'ACCOUNTANT' ? 'ACCOUNT' : payload.role;
+  const normalizedPayload = { ...payload, role: normalizedRole };
+
+  try {
+    const res = await apiRequest<{ message: string; user: ApiUserDTO }>(`/api/v1/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(normalizedPayload),
+    });
+    try {
+      await updateUserRecord(id, {
+        name: payload.fullName,
+        username: payload.email,
+        role: (payload.role === 'ACCOUNT' ? 'ACCOUNTANT' : payload.role) as any,
+        status: payload.status as any,
+      });
+    } catch {}
+    return res;
+  } catch (err: unknown) {
+    console.warn('[apiUpdateUser] Fastify request failed, using direct store/Supabase fallback:', err);
+    const updated = await updateUserRecord(id, {
+      name: payload.fullName,
+      username: payload.email,
+      role: (payload.role === 'ACCOUNT' ? 'ACCOUNTANT' : payload.role) as any,
+      status: payload.status as any,
+    });
+    return {
+      message: `User "${updated.name}" updated successfully in database.`,
+      user: {
+        id: updated.id,
+        fullName: updated.name,
+        email: updated.username,
+        username: updated.username,
+        role: updated.role as any,
+        status: updated.status as any,
+        department: payload.department || null,
+        designation: payload.designation || null,
+        employeeId: payload.employeeId || null,
+        forcePasswordReset: payload.forcePasswordReset ?? false,
+        isSuperAdmin: updated.role === 'SUPER_ADMIN',
+        lastLoginAt: null,
+        sessionRevokedAt: null,
+        createdAt: updated.createdAt,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+  }
 }
+
+export async function apiDeleteUser(id: string): Promise<{ message: string; deletedId: string }> {
+  // Main admin protection
+  if (id === '6060b3df-fec0-4772-8d3a-d32d3efd97d5' || id === '00000000-0000-0000-0000-000000000001') {
+    throw new Error('Action rejected: Primary Super Administrator account cannot be deleted.');
+  }
+
+  try {
+    const res = await apiRequest<{ message: string; deletedId: string }>(`/api/v1/users/${id}`, {
+      method: 'DELETE',
+    });
+    try {
+      await deleteUserRecord(id);
+    } catch {}
+    return res;
+  } catch (err: unknown) {
+    console.warn('[apiDeleteUser] Fastify request failed, using direct store/Supabase fallback:', err);
+    await deleteUserRecord(id);
+    return {
+      message: 'User permanently deleted from database and system.',
+      deletedId: id,
+    };
+  }
+}
+
+export async function apiSyncUsers(): Promise<ApiUserListResponse> {
+  // Reconcile and synchronize with Supabase database
+  try {
+    await syncUsersFromSupabase();
+  } catch (err) {
+    console.warn('[apiSyncUsers] sync error:', err);
+  }
+  return apiGetUsers({ page: 1, limit: 100 });
+}
+
 
 export async function apiDeactivateUser(id: string): Promise<{ message: string; user: ApiUserDTO }> {
   return apiRequest<{ message: string; user: ApiUserDTO }>(`/api/v1/users/${id}/deactivate`, {

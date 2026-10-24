@@ -78,6 +78,7 @@ export interface AuditLogParams {
   oldValues?: Record<string, unknown> | null;
   newValues?: Record<string, unknown> | null;
   targetUserId?: string | null;
+  companyId?: string | null;
   details?: Record<string, unknown> | null;
   request?: FastifyRequest;
   ipAddress?: string;

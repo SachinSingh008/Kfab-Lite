@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DollarSign,
   FileCheck2,
@@ -20,6 +20,7 @@ import { AppUser } from "@/lib/auth-store";
 
 interface AccountsViewProps {
   currentUser: AppUser;
+  records?: InwardReconciliationRecord[];
 }
 
 export interface InwardReconciliationRecord {
@@ -39,10 +40,16 @@ export interface InwardReconciliationRecord {
 // Clean slate: Live reconciliation data populated from Supabase invoices/gate passes
 const DEFAULT_ACCOUNTS_DATA: InwardReconciliationRecord[] = [];
 
-export function AccountsView({ currentUser }: AccountsViewProps) {
-  const [records, setRecords] = useState<InwardReconciliationRecord[]>(DEFAULT_ACCOUNTS_DATA);
+export function AccountsView({ currentUser, records: propRecords }: AccountsViewProps) {
+  const [records, setRecords] = useState<InwardReconciliationRecord[]>(propRecords || DEFAULT_ACCOUNTS_DATA);
   const [searchTerm, setSearchTerm] = useState("");
   const [notification, setNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (propRecords !== undefined) {
+      setRecords(propRecords);
+    }
+  }, [propRecords]);
 
   const filtered = records.filter(
     (r) =>

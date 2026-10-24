@@ -135,7 +135,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
         onOpenChallanCapture: _openChallanCapture,
       ),
       ReportsBillsScreen(authState: widget.authState),
-      TeamChatScreen(authState: widget.authState),
+      TeamChatScreen(
+        authState: widget.authState,
+        onGoHome: () => _onTabSelected(2),
+      ),
     ];
 
     return ListenableBuilder(
@@ -302,7 +305,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
       },
       {
         'title': 'Team Chat & Channels',
-        'subtitle': '#all-plant-alerts, #bay-1-fitup, #welding-qa',
+        'subtitle': '🚧 Under process (Preview only)',
         'tabIndex': 4,
         'icon': Icons.chat_bubble_outline,
         'color': const Color(0xFF7C3AED),

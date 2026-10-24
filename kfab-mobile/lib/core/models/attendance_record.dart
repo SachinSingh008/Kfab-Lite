@@ -1,6 +1,7 @@
 enum AttendanceStatus {
   present,
   absent,
+  od,
   notMarked,
   halfDay,
 }
@@ -12,6 +13,8 @@ extension AttendanceStatusExtension on AttendanceStatus {
         return 'PRESENT';
       case AttendanceStatus.absent:
         return 'ABSENT';
+      case AttendanceStatus.od:
+        return 'OD';
       case AttendanceStatus.halfDay:
         return 'HALF DAY';
       case AttendanceStatus.notMarked:
@@ -25,6 +28,8 @@ class AttendanceRecord {
   final String employeeId;
   final String date;
   final AttendanceStatus status;
+  final double overtimeHours;
+  final String? remarks;
   final String? punchTime;
   final bool isLocked;
 
@@ -33,6 +38,8 @@ class AttendanceRecord {
     required this.employeeId,
     required this.date,
     required this.status,
+    this.overtimeHours = 0.0,
+    this.remarks,
     this.punchTime,
     this.isLocked = false,
   });
@@ -42,6 +49,8 @@ class AttendanceRecord {
     String? employeeId,
     String? date,
     AttendanceStatus? status,
+    double? overtimeHours,
+    String? remarks,
     String? punchTime,
     bool? isLocked,
   }) {
@@ -50,6 +59,8 @@ class AttendanceRecord {
       employeeId: employeeId ?? this.employeeId,
       date: date ?? this.date,
       status: status ?? this.status,
+      overtimeHours: overtimeHours ?? this.overtimeHours,
+      remarks: remarks ?? this.remarks,
       punchTime: punchTime ?? this.punchTime,
       isLocked: isLocked ?? this.isLocked,
     );

@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from '../../middleware/auth.js';
 import { ROLE_DEFAULT_PERMISSIONS } from '../../middleware/rbac.js';
 import { logSecurityAction } from '../../middleware/audit.js';
+import { supabaseAdmin } from '../../db/supabase.js';
 
 export async function authRoutes(fastify: FastifyInstance) {
   // 1. Get current authenticated user profile & effective permissions
@@ -55,3 +56,4 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   );
 }
+

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/state/auth_state.dart';
 import '../../core/config/supabase_config.dart';
@@ -5,6 +6,18 @@ import '../../core/config/supabase_config.dart';
 // ==============================================================================
 // Models for Mobile Reports & Project Tracking
 // ==============================================================================
+class ProgressDataPoint {
+  final String date;
+  final double planned;
+  final double actual;
+
+  const ProgressDataPoint({
+    required this.date,
+    required this.planned,
+    required this.actual,
+  });
+}
+
 class MobileProject {
   final String id;
   final String projectName;
@@ -147,6 +160,10 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
   bool _showKpiDetails = false;
   bool _isLoading = true;
   String _searchQuery = '';
+
+  // Progress Visualizer Mode: 'line' (Line Graph), 'bar' (Bar Timeline), 'loader' (Radial Gauge Loader)
+  String _progressGraphMode = 'line';
+  int? _selectedTimelineIndex;
 
   // Expanded project ID in Tab 2
   String? _expandedProjectId;
@@ -1165,7 +1182,7 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
             const SizedBox(height: 14),
 
             // Tab Content
-            if (_activeReportTab == 0) _buildTab1ProjectProgress() else _buildTab2ProjectDetails(),
+            if (_activeReportTab == 0) _buildTab1ProjectProgress(efficiency) else _buildTab2ProjectDetails(),
           ],
         ),
       ),
@@ -1173,9 +1190,13 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
   }
 
   // ----------------------------------------------------------------------------
-  // TAB 1: PROJECT PROGRESS
+  // TAB 1: PROJECT PROGRESS (Line Graph / Bar Timeline / Loader Gauge Selectable)
   // ----------------------------------------------------------------------------
-  Widget _buildTab1ProjectProgress() {
+  Widget _buildTab1ProjectProgress(int efficiency) {
+    const double plannedPercent = 85.0;
+    final double actualPercent = efficiency.toDouble();
+    final timelinePoints = _getTimelinePoints(efficiency);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1186,52 +1207,60 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('PLANNED VS ACTUAL PROGRESS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+                  const Text(
+                    'PLANNED VS ACTUAL PROGRESS',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5),
+                  ),
                   Row(
                     children: [
-                      Icon(Icons.circle, size: 8, color: Color(0xFF2563EB)),
-                      SizedBox(width: 4),
-                      Text('Planned', style: TextStyle(fontSize: 9, color: Color(0xFF64748B))),
-                      SizedBox(width: 8),
-                      Icon(Icons.circle, size: 8, color: Color(0xFF059669)),
-                      SizedBox(width: 4),
-                      Text('Actual', style: TextStyle(fontSize: 9, color: Color(0xFF64748B))),
+                      const Icon(Icons.circle, size: 8, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 4),
+                      const Text('Planned (85%)', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.circle, size: 8, color: Color(0xFF059669)),
+                      const SizedBox(width: 4),
+                      Text('Actual ($efficiency%)', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Visual Line Curve / Bar Representation
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox(
-                  height: 12,
-                  child: Stack(
-                    children: [
-                      Container(color: const Color(0xFFF1F5F9)),
-                      FractionallySizedBox(widthFactor: 0.85, child: Container(color: const Color(0xFF93C5FD))),
-                      FractionallySizedBox(widthFactor: 0.78, child: Container(color: const Color(0xFF059669))),
-                    ],
-                  ),
+              const SizedBox(height: 10),
+
+              // Visualizer Segmented Switcher (Line Graph, Bar Timeline, Loader / Radial)
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                padding: const EdgeInsets.all(2.5),
+                child: Row(
+                  children: [
+                    _buildGraphTypeChip('line', Icons.show_chart_rounded, 'Line Graph'),
+                    _buildGraphTypeChip('bar', Icons.align_horizontal_left_rounded, 'Bar Timeline'),
+                    _buildGraphTypeChip('loader', Icons.donut_large_rounded, 'Loader / Radial'),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Start (0%)', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                  Text('Target Planned: 85%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
-                  Text('Actual: 78%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
-                  Text('Final (100%)', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
-                ],
-              ),
+              const SizedBox(height: 12),
+
+              // Active Visualizer Body
+              if (_progressGraphMode == 'line')
+                _buildLineGraphView(timelinePoints)
+              else if (_progressGraphMode == 'bar')
+                _buildBarTimelineView(actualPercent, plannedPercent)
+              else
+                _buildLoaderGaugeView(actualPercent, plannedPercent),
             ],
           ),
         ),
@@ -1678,5 +1707,595 @@ class _ReportsBillsScreenState extends State<ReportsBillsScreen> {
         ],
       ),
     );
+  }
+
+  // --------------------------------------------------------------------------
+  // TAB 1 PROGRESS VISUALIZERS: LINE GRAPH, BAR TIMELINE, LOADER GAUGE
+  // --------------------------------------------------------------------------
+  Widget _buildGraphTypeChip(String mode, IconData icon, String label) {
+    final isSelected = _progressGraphMode == mode;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() {
+          _progressGraphMode = mode;
+          _selectedTimelineIndex = null;
+        }),
+        borderRadius: BorderRadius.circular(6),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isSelected
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1))]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 1. Line Graph View
+  Widget _buildLineGraphView(List<ProgressDataPoint> points) {
+    final ProgressDataPoint? selectedPoint =
+        (_selectedTimelineIndex != null && _selectedTimelineIndex! < points.length)
+            ? points[_selectedTimelineIndex!]
+            : null;
+    final double? pointVariance = selectedPoint != null
+        ? ((selectedPoint.actual - selectedPoint.planned) * 10).round() / 10
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Interactive Line Chart with Touch / Tap Listener
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final double chartWidth = constraints.maxWidth;
+            return GestureDetector(
+              onTapDown: (details) {
+                final double x = details.localPosition.dx;
+                const double leftPad = 34.0;
+                const double rightPad = 16.0;
+                final double usableWidth = chartWidth - leftPad - rightPad;
+                if (usableWidth > 0 && points.length > 1) {
+                  final double stepX = usableWidth / (points.length - 1);
+                  final int idx = (((x - leftPad) / stepX) + 0.5).floor().clamp(0, points.length - 1);
+                  setState(() {
+                    _selectedTimelineIndex = _selectedTimelineIndex == idx ? null : idx;
+                  });
+                }
+              },
+              child: CustomPaint(
+                size: Size(chartWidth, 160),
+                painter: LineGraphPainter(
+                  points: points,
+                  selectedIndex: _selectedTimelineIndex,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 6),
+
+        // Interactive Inspection Tooltip Banner or Micro-hint
+        if (selectedPoint != null && pointVariance != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 11, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 4),
+                    Text(
+                      selectedPoint.date,
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Planned: ${selectedPoint.planned}%',
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF93C5FD)),
+                ),
+                Text(
+                  'Actual: ${selectedPoint.actual}%',
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF6EE7B7)),
+                ),
+                Text(
+                  '${pointVariance >= 0 ? '+' : ''}$pointVariance%',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: pointVariance >= 0 ? const Color(0xFF6EE7B7) : const Color(0xFFFCA5A5),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.touch_app_outlined, size: 12, color: Color(0xFF94A3B8)),
+              SizedBox(width: 4),
+              Text(
+                'Tap any point along the curve to inspect milestone telemetry',
+                style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  // 2. Bar Timeline View (Current view elevated)
+  Widget _buildBarTimelineView(double actualPercent, double plannedPercent) {
+    final variance = ((actualPercent - plannedPercent) * 10).round() / 10;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        // Visual Line Curve / Bar Representation
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox(
+            height: 14,
+            child: Stack(
+              children: [
+                Container(color: const Color(0xFFF1F5F9)),
+                FractionallySizedBox(widthFactor: (plannedPercent / 100).clamp(0.0, 1.0), child: Container(color: const Color(0xFF93C5FD))),
+                FractionallySizedBox(widthFactor: (actualPercent / 100).clamp(0.0, 1.0), child: Container(color: const Color(0xFF059669))),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Start (0%)', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+            Text('Target Planned: ${plannedPercent.round()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
+            Text('Actual: ${actualPercent.round()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+            const Text('Final (100%)', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8))),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Cumulative Milestone Completion:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+              Text(
+                '${variance >= 0 ? '+' : ''}$variance% vs planned schedule',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: variance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 3. Loader Gauge View (Radial Progress Loader)
+  Widget _buildLoaderGaugeView(double actualPercent, double plannedPercent) {
+    final variance = ((actualPercent - plannedPercent) * 10).round() / 10;
+    return Column(
+      children: [
+        const SizedBox(height: 6),
+        Center(
+          child: SizedBox(
+            width: 160,
+            height: 160,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(160, 160),
+                  painter: RadialLoaderPainter(
+                    plannedPercent: plannedPercent,
+                    actualPercent: actualPercent,
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.donut_large_rounded, size: 22, color: Color(0xFF059669)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${actualPercent.round()}%',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    ),
+                    const Text(
+                      'ACTUAL',
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Target: ${plannedPercent.round()}%',
+                        style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildLoaderMetricPill(
+                title: 'PLANNED',
+                value: '${plannedPercent.round()}%',
+                subtext: 'Target Goal',
+                color: const Color(0xFF2563EB),
+                icon: Icons.flag_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildLoaderMetricPill(
+                title: 'ACTUAL',
+                value: '${actualPercent.round()}%',
+                subtext: 'Fabricated',
+                color: const Color(0xFF059669),
+                icon: Icons.check_circle_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildLoaderMetricPill(
+                title: 'VARIANCE',
+                value: '${variance >= 0 ? '+' : ''}$variance%',
+                subtext: variance >= 0 ? 'Ahead' : 'Pace Lag',
+                color: variance >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                icon: Icons.speed_rounded,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoaderMetricPill({
+    required String title,
+    required String value,
+    required String subtext,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+              Icon(icon, size: 12, color: color),
+            ],
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
+          ),
+          Text(subtext, style: const TextStyle(fontSize: 8.5, color: Color(0xFF94A3B8))),
+        ],
+      ),
+    );
+  }
+
+  List<ProgressDataPoint> _getTimelinePoints(int currentActualEfficiency) {
+    final now = DateTime.now();
+    final List<ProgressDataPoint> points = [];
+    const int count = 7;
+    for (int i = count - 1; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i * 5));
+      final monthName = _monthAbbr(date.month);
+      final dateStr = '$monthName ${date.day.toString().padLeft(2, '0')}';
+
+      final double factor = (count - 1 - i) / (count - 1);
+      final double planned = (15.0 + factor * 70.0).clamp(0.0, 100.0);
+      final double actual = (10.0 + factor * (currentActualEfficiency - 10.0)).clamp(0.0, 100.0);
+
+      points.add(ProgressDataPoint(
+        date: dateStr,
+        planned: (planned * 10).round() / 10.0,
+        actual: (actual * 10).round() / 10.0,
+      ));
+    }
+    return points;
+  }
+
+  String _monthAbbr(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return (month >= 1 && month <= 12) ? months[month - 1] : '';
+  }
+}
+
+// ==============================================================================
+// Custom Painter for Planned vs Actual Progress Line Graph
+// ==============================================================================
+class LineGraphPainter extends CustomPainter {
+  final List<ProgressDataPoint> points;
+  final int? selectedIndex;
+
+  LineGraphPainter({
+    required this.points,
+    this.selectedIndex,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+
+    const double leftPad = 34.0;
+    const double rightPad = 16.0;
+    const double topPad = 16.0;
+    const double bottomPad = 26.0;
+
+    final double chartWidth = size.width - leftPad - rightPad;
+    final double chartHeight = size.height - topPad - bottomPad;
+
+    // Y Axis grid lines (0%, 25%, 50%, 75%, 100%)
+    final gridPaint = Paint()
+      ..color = const Color(0xFFF1F5F9)
+      ..strokeWidth = 1.0;
+
+    const textStyle = TextStyle(
+      color: Color(0xFF94A3B8),
+      fontSize: 8.5,
+      fontWeight: FontWeight.w600,
+    );
+
+    for (int p = 0; p <= 100; p += 25) {
+      final y = topPad + chartHeight * (1.0 - (p / 100.0));
+      canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
+
+      final textSpan = TextSpan(text: '$p%', style: textStyle);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, Offset(leftPad - textPainter.width - 4, y - textPainter.height / 2));
+    }
+
+    // Map data points to canvas coordinates
+    final List<Offset> plannedOffsets = [];
+    final List<Offset> actualOffsets = [];
+    final double stepX = points.length > 1 ? chartWidth / (points.length - 1) : 0;
+
+    for (int i = 0; i < points.length; i++) {
+      final x = leftPad + i * stepX;
+      final yPlanned = topPad + chartHeight * (1.0 - (points[i].planned.clamp(0.0, 100.0) / 100.0));
+      final yActual = topPad + chartHeight * (1.0 - (points[i].actual.clamp(0.0, 100.0) / 100.0));
+      plannedOffsets.add(Offset(x, yPlanned));
+      actualOffsets.add(Offset(x, yActual));
+
+      // X Axis date label
+      final dateSpan = TextSpan(
+        text: points[i].date,
+        style: TextStyle(
+          color: selectedIndex == i ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+          fontSize: 8.5,
+          fontWeight: selectedIndex == i ? FontWeight.bold : FontWeight.w500,
+        ),
+      );
+      final datePainter = TextPainter(
+        text: dateSpan,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      datePainter.paint(canvas, Offset(x - datePainter.width / 2, size.height - bottomPad + 6));
+    }
+
+    // Area gradient under Actual curve
+    final Path areaPath = Path();
+    areaPath.moveTo(actualOffsets.first.dx, topPad + chartHeight);
+    for (final pt in actualOffsets) {
+      areaPath.lineTo(pt.dx, pt.dy);
+    }
+    areaPath.lineTo(actualOffsets.last.dx, topPad + chartHeight);
+    areaPath.close();
+
+    final areaPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0x33059669), Color(0x02059669)],
+      ).createShader(Rect.fromLTWH(leftPad, topPad, chartWidth, chartHeight));
+    canvas.drawPath(areaPath, areaPaint);
+
+    // Planned Line (Blue dashed)
+    final plannedPaint = Paint()
+      ..color = const Color(0xFF2563EB)
+      ..strokeWidth = 2.2
+      ..style = PaintingStyle.stroke;
+
+    for (int i = 0; i < plannedOffsets.length - 1; i++) {
+      _drawDashedLine(canvas, plannedOffsets[i], plannedOffsets[i + 1], plannedPaint);
+    }
+
+    // Actual Line (Emerald solid)
+    final actualPath = Path();
+    actualPath.moveTo(actualOffsets.first.dx, actualOffsets.first.dy);
+    for (int i = 1; i < actualOffsets.length; i++) {
+      actualPath.lineTo(actualOffsets[i].dx, actualOffsets[i].dy);
+    }
+    final actualPaint = Paint()
+      ..color = const Color(0xFF059669)
+      ..strokeWidth = 2.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(actualPath, actualPaint);
+
+    // Markers on Points
+    final plannedDotPaint = Paint()..color = const Color(0xFF2563EB);
+    final actualDotPaint = Paint()..color = const Color(0xFF059669);
+    final whiteBorderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    for (int i = 0; i < points.length; i++) {
+      // Planned Dot
+      canvas.drawCircle(plannedOffsets[i], 3.5, plannedDotPaint);
+
+      // Actual Dot
+      canvas.drawCircle(actualOffsets[i], 4.5, actualDotPaint);
+      canvas.drawCircle(actualOffsets[i], 4.5, whiteBorderPaint);
+
+      // Selected halo & vertical indicator line
+      if (selectedIndex == i) {
+        final selectLinePaint = Paint()
+          ..color = const Color(0xFF0F172A).withValues(alpha: 0.15)
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(
+          Offset(actualOffsets[i].dx, topPad),
+          Offset(actualOffsets[i].dx, topPad + chartHeight),
+          selectLinePaint,
+        );
+
+        final haloPaint = Paint()
+          ..color = const Color(0xFF059669).withValues(alpha: 0.25)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(actualOffsets[i], 8.5, haloPaint);
+      }
+    }
+  }
+
+  void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint, {double dashWidth = 4, double dashSpace = 3}) {
+    final double dx = p2.dx - p1.dx;
+    final double dy = p2.dy - p1.dy;
+    final double distance = math.sqrt(dx * dx + dy * dy);
+    if (distance == 0) return;
+    final double unitX = dx / distance;
+    final double unitY = dy / distance;
+
+    double currentDist = 0.0;
+    while (currentDist < distance) {
+      final double endDist = math.min(currentDist + dashWidth, distance);
+      canvas.drawLine(
+        Offset(p1.dx + unitX * currentDist, p1.dy + unitY * currentDist),
+        Offset(p1.dx + unitX * endDist, p1.dy + unitY * endDist),
+        paint,
+      );
+      currentDist += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant LineGraphPainter oldDelegate) {
+    return oldDelegate.points != points || oldDelegate.selectedIndex != selectedIndex;
+  }
+}
+
+// ==============================================================================
+// Custom Painter for Loader Gauge (Radial Progress Dual-Ring Loader)
+// ==============================================================================
+class RadialLoaderPainter extends CustomPainter {
+  final double plannedPercent;
+  final double actualPercent;
+
+  RadialLoaderPainter({
+    required this.plannedPercent,
+    required this.actualPercent,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final double outerRadius = (size.width / 2) - 10;
+    final double innerRadius = outerRadius - 16;
+
+    final bgPaint = Paint()
+      ..color = const Color(0xFFF1F5F9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 9.0;
+
+    final rectOuter = Rect.fromCircle(center: center, radius: outerRadius);
+    final rectInner = Rect.fromCircle(center: center, radius: innerRadius);
+
+    // Background tracks
+    canvas.drawArc(rectOuter, 0, 2 * math.pi, false, bgPaint);
+    canvas.drawArc(rectInner, 0, 2 * math.pi, false, bgPaint);
+
+    // Planned arc (Outer track - Blue)
+    final plannedPaint = Paint()
+      ..color = const Color(0xFF2563EB)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 9.0;
+    final double plannedSweep = (plannedPercent.clamp(0.0, 100.0) / 100.0) * 2 * math.pi;
+    canvas.drawArc(rectOuter, -math.pi / 2, plannedSweep, false, plannedPaint);
+
+    // Actual arc (Inner track - Emerald)
+    final actualPaint = Paint()
+      ..color = const Color(0xFF059669)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 9.0;
+    final double actualSweep = (actualPercent.clamp(0.0, 100.0) / 100.0) * 2 * math.pi;
+    canvas.drawArc(rectInner, -math.pi / 2, actualSweep, false, actualPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant RadialLoaderPainter oldDelegate) {
+    return oldDelegate.plannedPercent != plannedPercent || oldDelegate.actualPercent != actualPercent;
   }
 }

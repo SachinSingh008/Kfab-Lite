@@ -15,7 +15,26 @@ export type AppPermission =
   | 'reports.view'
   | 'projects.create'
   | 'projects.edit'
-  | 'projects.delete';
+  | 'projects.delete'
+  | 'attendance.view'
+  | 'attendance.create'
+  | 'attendance.update'
+  | 'attendance.delete'
+  | 'attendance.bulk_update'
+  | 'attendance.overtime_update'
+  | 'attendance.ledger.view'
+  | 'attendance.ledger.update'
+  | 'inventory.view'
+  | 'inventory.create'
+  | 'inventory.update'
+  | 'inventory.retire'
+  | 'inventory.purchase'
+  | 'inventory.issue'
+  | 'inventory.return'
+  | 'inventory.stock_adjust'
+  | 'inventory.view_analysis'
+  | 'inventory.ledger.view'
+  | 'inventory.ledger.update';
 
 // Role to default permissions mapping
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
@@ -34,6 +53,25 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
     'projects.create',
     'projects.edit',
     'projects.delete',
+    'attendance.view',
+    'attendance.create',
+    'attendance.update',
+    'attendance.delete',
+    'attendance.bulk_update',
+    'attendance.overtime_update',
+    'attendance.ledger.view',
+    'attendance.ledger.update',
+    'inventory.view',
+    'inventory.create',
+    'inventory.update',
+    'inventory.retire',
+    'inventory.purchase',
+    'inventory.issue',
+    'inventory.return',
+    'inventory.stock_adjust',
+    'inventory.view_analysis',
+    'inventory.ledger.view',
+    'inventory.ledger.update',
   ],
   ADMIN: [
     'users.view',
@@ -47,11 +85,50 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, AppPermission[]> = {
     'reports.view',
     'projects.create',
     'projects.edit',
+    'attendance.view',
+    'attendance.create',
+    'attendance.update',
+    'attendance.delete',
+    'attendance.bulk_update',
+    'attendance.overtime_update',
+    'attendance.ledger.view',
+    'attendance.ledger.update',
+    'inventory.view',
+    'inventory.create',
+    'inventory.update',
+    'inventory.retire',
+    'inventory.purchase',
+    'inventory.issue',
+    'inventory.return',
+    'inventory.stock_adjust',
+    'inventory.view_analysis',
+    'inventory.ledger.view',
+    'inventory.ledger.update',
   ],
-  ACCOUNT: [],
+  ACCOUNT: [
+    'attendance.view',
+    'attendance.ledger.view',
+    'inventory.view',
+    'inventory.create',
+    'inventory.update',
+    'inventory.retire',
+    'inventory.view_analysis',
+    'inventory.ledger.view',
+  ],
   SUPERVISOR: [
     'reports.view',
     'projects.edit',
+    'attendance.view',
+    'attendance.create',
+    'attendance.update',
+    'inventory.view',
+    'inventory.create',
+    'inventory.update',
+    'inventory.retire',
+    'inventory.issue',
+    'inventory.return',
+    'inventory.ledger.view',
+    'inventory.ledger.update',
   ],
 };
 

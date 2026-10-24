@@ -13,6 +13,9 @@ import { logsRoutes } from './modules/logs/logs.routes.js';
 import { systemLogsRoutes } from './modules/system-logs/system-logs.routes.js';
 import { projectsRoutes } from './modules/projects/projects.routes.js';
 import { reportsRoutes } from './modules/reports/reports.routes.js';
+import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
+import { inventoryRoutes } from './modules/inventory/inventory.routes.js';
+import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
 import { supabaseAdmin } from './db/supabase.js';
 
 export function buildApp(): FastifyInstance {
@@ -139,6 +142,9 @@ export function buildApp(): FastifyInstance {
       v1.register(systemLogsRoutes, { prefix: '/system-logs' });
       v1.register(projectsRoutes, { prefix: '/projects' });
       v1.register(reportsRoutes, { prefix: '/reports' });
+      v1.register(attendanceRoutes, { prefix: '/attendance' });
+      v1.register(inventoryRoutes, { prefix: '/inventory' });
+      v1.register(dashboardRoutes, { prefix: '/dashboard' });
 
       // Fallback/Stub for employees directory
       v1.get('/employees', async (_request, reply) => {

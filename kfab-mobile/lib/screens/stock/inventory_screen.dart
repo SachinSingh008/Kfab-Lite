@@ -280,15 +280,109 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              if (widget.store.isSampleDataActive)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.science_outlined, size: 15, color: Color(0xFFD97706)),
+                      const SizedBox(width: 6),
+                      const Expanded(
+                        child: Text(
+                          'Demo Sample Stock Active',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          widget.store.removeSampleData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Sample stock cleaned.'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFFCD34D)),
+                          ),
+                          child: const Text(
+                            'Wipe Data',
+                            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Materials List
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  itemCount: items.length,
-                  itemBuilder: (context, idx) {
-                    final item = items[idx];
+                child: items.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                widget.store.isSampleDataActive ? Icons.search_off : Icons.inventory_2_outlined,
+                                size: 48,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                widget.store.isSampleDataActive
+                                    ? 'No materials match filter'
+                                    : 'Demo Sample Data Removed',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                widget.store.isSampleDataActive
+                                    ? 'Try adjusting your search query or category filter.'
+                                    : 'All sample inventory stock items have been cleaned for production.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 16),
+                              if (!widget.store.isSampleDataActive)
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0F766E),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  ),
+                                  onPressed: () {
+                                    widget.store.loadSampleData();
+                                  },
+                                  icon: const Icon(Icons.auto_awesome, size: 16),
+                                  label: const Text('Reload Demo Data', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        itemCount: items.length,
+                        itemBuilder: (context, idx) {
+                          final item = items[idx];
                     final isLow = item.isLow;
 
                     return Container(

@@ -44,13 +44,19 @@ import {
   updateChatGroupMembers,
   markMessagesAsRead,
   SAMPLE_CHAT_IMAGES,
+  DEFAULT_FALLBACK_GROUP,
 } from "@/lib/chat-store";
+import { ChatUnderProcessView } from "./chat-under-process-view";
 
 interface ChatViewProps {
   currentUser: AppUser;
+  onBackToDashboard?: () => void;
 }
 
-export function ChatView({ currentUser }: ChatViewProps) {
+export function ChatView({ currentUser, onBackToDashboard }: ChatViewProps) {
+  // Show under-process animated view by default as requested
+  const [showDevChat, setShowDevChat] = useState(false);
+
   // Groups and messages state
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
@@ -114,21 +120,21 @@ export function ChatView({ currentUser }: ChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedGroupId, simulatedUser]);
 
-  const activeGroup = groups.find((g) => g.id === selectedGroupId) || groups[0];
+  const activeGroup = groups.find((g) => g.id === selectedGroupId) || groups[0] || DEFAULT_FALLBACK_GROUP;
 
   const isSuperAdmin = simulatedUser.role === "SUPER_ADMIN";
   const isAdmin = simulatedUser.role === "ADMIN" || isSuperAdmin;
-  const currentMemberInGroup = activeGroup?.members.find((m) => m.userId === simulatedUser.id);
+  const currentMemberInGroup = activeGroup?.members?.find((m) => m.userId === simulatedUser.id);
   const canSendWithTargeting =
     isSuperAdmin || isAdmin || (currentMemberInGroup && (currentMemberInGroup.isGroupLead || currentMemberInGroup.canViewAll));
 
-  const accountantsInGroup = activeGroup?.members.filter((m) => m.role === "ACCOUNTANT") || [];
-  const supervisorsInGroup = activeGroup?.members.filter((m) => m.role === "SUPERVISOR") || [];
+  const accountantsInGroup = activeGroup?.members?.filter((m) => m.role === "ACCOUNTANT") || [];
+  const supervisorsInGroup = activeGroup?.members?.filter((m) => m.role === "SUPERVISOR") || [];
 
   // Filter messages for current group and simulated viewer
   const visibleMessages = messages.filter((m) => {
-    if (m.groupId !== activeGroup?.id) return false;
-    return canUserSeeMessage(m, simulatedUser.id, simulatedUser.role, activeGroup.members);
+    if (m.groupId !== activeGroup.id) return false;
+    return canUserSeeMessage(m, simulatedUser.id, simulatedUser.role, activeGroup.members || DEFAULT_FALLBACK_GROUP.members);
   });
 
   // Automatically mark visible messages as read by current user
@@ -183,12 +189,19 @@ export function ChatView({ currentUser }: ChatViewProps) {
 
     if (!text && !image) return;
 
+    const targetGroup = activeGroup || groups[0] || DEFAULT_FALLBACK_GROUP;
+    if (groups.length === 0) {
+      setGroups([targetGroup]);
+      saveStoredChatGroups([targetGroup]);
+      setSelectedGroupId(targetGroup.id);
+    }
+
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      groupId: activeGroup.id,
+      groupId: targetGroup.id,
       senderId: simulatedUser.id,
       senderName: simulatedUser.name,
       senderUsername: simulatedUser.username,
@@ -308,11 +321,28 @@ export function ChatView({ currentUser }: ChatViewProps) {
     );
   };
 
+  if (!showDevChat) {
+    return (
+      <ChatUnderProcessView
+        currentUser={currentUser}
+        onBackToDashboard={onBackToDashboard}
+        onEnableDevChat={() => setShowDevChat(true)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#F1F5F9] font-sans">
       {/* 1. TOP TESTING & SIMULATION TOOLBAR */}
       <div className="bg-[#0F172A] text-white px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDevChat(false)}
+            className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-[11px] cursor-pointer"
+          >
+            &larr; Exit to Under Process View
+          </button>
           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
             <Sparkles className="size-3.5" /> Granular Visibility Live Tester
           </span>

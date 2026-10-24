@@ -17,55 +17,16 @@ export interface UserResponseDTO {
 
 const DEFAULT_SYSTEM_USERS: UserResponseDTO[] = [
   {
-    id: '00000000-0000-0000-0000-000000000001',
-    fullName: 'Super Administrator',
-    email: 'superadmin@kfab.in',
+    id: '6060b3df-fec0-4772-8d3a-d32d3efd97d5',
+    fullName: 'Sachin Singh',
+    email: 'sachinasinghofficial@gmail.com',
     role: 'SUPER_ADMIN',
     status: 'ACTIVE',
     forcePasswordReset: false,
     isSuperAdmin: true,
     lastLoginAt: new Date().toISOString(),
     sessionRevokedAt: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000002',
-    fullName: 'Plant Administrator',
-    email: 'admin@kfab.in',
-    role: 'ADMIN',
-    status: 'ACTIVE',
-    forcePasswordReset: false,
-    isSuperAdmin: false,
-    lastLoginAt: null,
-    sessionRevokedAt: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000003',
-    fullName: 'Site Supervisor',
-    email: 'supervisor@kfab.in',
-    role: 'SUPERVISOR',
-    status: 'ACTIVE',
-    forcePasswordReset: false,
-    isSuperAdmin: false,
-    lastLoginAt: null,
-    sessionRevokedAt: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000004',
-    fullName: 'Finance Accountant',
-    email: 'accountant@kfab.in',
-    role: 'ACCOUNT',
-    status: 'ACTIVE',
-    forcePasswordReset: false,
-    isSuperAdmin: false,
-    lastLoginAt: null,
-    sessionRevokedAt: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-09-27T12:50:19.787098+00:00',
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -203,10 +164,23 @@ export class UsersService {
         throw new Error(`Failed to list users: ${error.message}`);
       }
 
-      const total = count ?? 0;
+      let activeProfiles = profiles || [];
+      if (hasServiceRoleKey) {
+        try {
+          const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+          if (authUsers?.users && authUsers.users.length > 0) {
+            const validAuthIds = new Set(authUsers.users.map((u) => u.id));
+            activeProfiles = activeProfiles.filter((p) => validAuthIds.has(p.id));
+          }
+        } catch {
+          // If auth check fails, use returned activeProfiles
+        }
+      }
+
+      const total = activeProfiles.length;
       const totalPages = Math.ceil(total / limit) || 1;
 
-      const mappedUsers: UserResponseDTO[] = (profiles || []).map((p) => ({
+      const mappedUsers: UserResponseDTO[] = activeProfiles.map((p) => ({
         id: p.id,
         fullName: p.full_name || 'User',
         email: p.email || '',
@@ -584,11 +558,17 @@ export class UsersService {
     // Delete profile (cascades or explicit)
     await supabaseAdmin.from('profiles').delete().eq('id', userId);
 
+    // Also mark inactive in profile as safeguard
+    await supabaseAdmin.from('profiles').update({ status: 'INACTIVE' }).eq('id', userId);
+
     // Delete from Supabase Auth
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (authError) {
       console.warn(`[Auth Delete Warning] Error removing auth identity:`, authError.message);
     }
+
+    // Also purge from memory users
+    memoryUsers = memoryUsers.filter((u) => u.id !== userId);
 
     return { deletedId: userId };
   }

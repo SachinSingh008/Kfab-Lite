@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../core/state/auth_state.dart';
 import '../../core/models/chat_models.dart';
+import 'chat_under_process_view.dart';
 
 class TeamChatScreen extends StatefulWidget {
   final AuthState authState;
+  final VoidCallback? onGoHome;
 
-  const TeamChatScreen({super.key, required this.authState});
+  const TeamChatScreen({
+    super.key,
+    required this.authState,
+    this.onGoHome,
+  });
 
   @override
   State<TeamChatScreen> createState() => _TeamChatScreenState();
@@ -677,6 +683,21 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Flag to enable full chat when ready (defaults to false)
+    const enableFullChat = bool.fromEnvironment('ENABLE_REAL_CHAT', defaultValue: false);
+    if (enableFullChat) {
+      return _buildFullChatScaffold(context);
+    }
+
+    // Chats tab is visible in navigation, but not usable for now.
+    // Shows the funny animated Android working emoji/character and 'This feature is under process'
+    return ChatUnderProcessView(
+      authState: widget.authState,
+      onGoHome: widget.onGoHome,
+    );
+  }
+
+  Widget _buildFullChatScaffold(BuildContext context) {
     // Filter messages for current group and viewer
     final visibleMessages = _allMessages.where((msg) {
       if (msg.groupId != _activeGroupId) return false;
@@ -684,7 +705,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
         message: msg,
         currentUserId: 'usr-${_simulatedRole.name}',
         currentRole: _simulatedRole,
-        members: _currentGroup.members,
+        members: _groups.isEmpty ? [] : _currentGroup.members,
       );
     }).toList();
 

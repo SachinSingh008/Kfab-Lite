@@ -37,6 +37,8 @@ export type NavTab =
   | "dashboard"
   | "logs"
   | "chat"
+  | "inventory"
+  | "inventory-workbook"
   | "daily-reports"
   | "production"
   | "attendance"
@@ -79,9 +81,11 @@ export function Kfab360Sidebar({
   // Collapsible section categories state
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     executive: false,
+    inventory: false,
     reports: false,
     commercial: isSupervisor ? true : false,
     people: isSupervisor ? true : false,
+    files: false,
     security: isSupervisor || isAccountant ? true : false,
   });
 
@@ -211,9 +215,86 @@ export function Kfab360Sidebar({
             onClick={() => onSelectTab("chat")}
             icon={MessageSquare}
             label="Team Chat & Channels"
-            badge="Live"
+            badge="Soon"
             isShrunk={isShrunk}
           />
+          <SidebarNavItem
+            active={currentTab === "inventory"}
+            onClick={() => onSelectTab("inventory")}
+            icon={Boxes}
+            label="Inventory"
+            badge="Store"
+            isShrunk={isShrunk}
+          />
+        </div>
+
+        {/* ============================================================ */}
+        {/* Store & Inventory Section */}
+        {/* ============================================================ */}
+        <div>
+          {!isShrunk ? (
+            <button
+              type="button"
+              onClick={() => toggleSection("inventory")}
+              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
+              style={{ color: "var(--role-sidebar-section-title)" }}
+            >
+              <div className="flex items-center gap-1.5">
+                <Boxes className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
+                <span>Store & Inventory</span>
+              </div>
+              <span
+                className="size-4 rounded flex items-center justify-center border transition-colors"
+                style={{
+                  backgroundColor: "var(--role-sidebar-subtle)",
+                  borderColor: "var(--role-sidebar-border)",
+                  color: "var(--role-sidebar-fg)",
+                }}
+              >
+                {collapsedSections.inventory ? (
+                  <ChevronRight className="size-3" />
+                ) : (
+                  <Minus className="size-3" />
+                )}
+              </span>
+            </button>
+          ) : (
+            <div
+              className="h-2 border-b mb-1"
+              style={{ borderColor: "var(--role-sidebar-border)" }}
+            />
+          )}
+
+          {!collapsedSections.inventory && (
+            <div
+              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
+              style={{ borderColor: "var(--role-sidebar-subtle)" }}
+            >
+              <SidebarNavItem
+                active={currentTab === "inventory"}
+                onClick={() => onSelectTab("inventory")}
+                icon={Boxes}
+                label="Inventory Master"
+                badge="4 Tabs"
+                isShrunk={isShrunk}
+              />
+              <SidebarNavItem
+                active={currentTab === "stock"}
+                onClick={() => onSelectTab("stock")}
+                icon={Package}
+                label="Raw Material Stock"
+                isShrunk={isShrunk}
+              />
+              <SidebarNavItem
+                active={currentTab === "inventory-workbook"}
+                onClick={() => onSelectTab("inventory-workbook")}
+                icon={FileSpreadsheet}
+                label="Inventory Spreadsheet"
+                badge="Excel"
+                isShrunk={isShrunk}
+              />
+            </div>
+          )}
         </div>
 
         {/* ============================================================ */}
@@ -397,6 +478,76 @@ export function Kfab360Sidebar({
                 onClick={() => onSelectTab("employees")}
                 icon={Users}
                 label="Personnel Directory"
+                isShrunk={isShrunk}
+              />
+              <SidebarNavItem
+                active={currentTab === "attendance"}
+                onClick={() => onSelectTab("attendance")}
+                icon={CalendarCheck}
+                label="Attendance"
+                badge="3 Tabs"
+                isShrunk={isShrunk}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ============================================================ */}
+        {/* Files & Excel Workspaces (Section 30 & 68) */}
+        {/* ============================================================ */}
+        <div>
+          {!isShrunk ? (
+            <button
+              type="button"
+              onClick={() => toggleSection("files")}
+              className="w-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer group"
+              style={{ color: "var(--role-sidebar-section-title)" }}
+            >
+              <div className="flex items-center gap-1.5">
+                <FileSpreadsheet className="size-3" style={{ color: "var(--role-sidebar-section-title)" }} />
+                <span>Files & Workbooks</span>
+              </div>
+              <span
+                className="size-4 rounded flex items-center justify-center border transition-colors"
+                style={{
+                  backgroundColor: "var(--role-sidebar-subtle)",
+                  borderColor: "var(--role-sidebar-border)",
+                  color: "var(--role-sidebar-fg)",
+                }}
+              >
+                {collapsedSections.files ? (
+                  <ChevronRight className="size-3" />
+                ) : (
+                  <Minus className="size-3" />
+                )}
+              </span>
+            </button>
+          ) : (
+            <div
+              className="h-2 border-b mb-1"
+              style={{ borderColor: "var(--role-sidebar-border)" }}
+            />
+          )}
+
+          {!collapsedSections.files && (
+            <div
+              className={`space-y-1 mt-1 ${!isShrunk ? "pl-3.5 border-l-2 ml-2" : ""}`}
+              style={{ borderColor: "var(--role-sidebar-subtle)" }}
+            >
+              <SidebarNavItem
+                active={currentTab === "attendance"}
+                onClick={() => onSelectTab("attendance")}
+                icon={FileSpreadsheet}
+                label="Attendance Workbook"
+                badge="Excel"
+                isShrunk={isShrunk}
+              />
+              <SidebarNavItem
+                active={currentTab === "inventory-workbook"}
+                onClick={() => onSelectTab("inventory-workbook")}
+                icon={FileSpreadsheet}
+                label="Inventory"
+                badge="Excel"
                 isShrunk={isShrunk}
               />
             </div>

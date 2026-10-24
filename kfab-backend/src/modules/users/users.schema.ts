@@ -78,5 +78,5 @@ export const RevokeSessionsSchema = z.object({
 export type RevokeSessionsInput = z.infer<typeof RevokeSessionsSchema>;
 
 export const UserIdParamSchema = z.object({
-  id: z.string().uuid('Invalid User UUID format'),
+  id: z.string().min(1, 'User ID is required'),
 });
