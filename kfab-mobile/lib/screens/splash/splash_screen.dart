@@ -25,6 +25,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _startTime = DateTime.now();
 
+    // Check existing live Supabase session during splash animation
+    widget.authState.checkCurrentSession();
+
     // Smooth progress ticker
     _progressTimer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
       final elapsed = DateTime.now().difference(_startTime).inMilliseconds;

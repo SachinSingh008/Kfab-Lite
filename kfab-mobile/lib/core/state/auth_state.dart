@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 
 enum UserRole {
@@ -38,18 +39,22 @@ extension UserRoleExtension on UserRole {
 
 class AuthState extends ChangeNotifier {
   bool _isAuthenticated = false;
+  String _userId = '';
   String _userName = '';
   String _userEmail = '';
   String _userPhone = '+91 98230 11234';
   final String _companyName = 'KFAB Infra Projects';
   UserRole _role = UserRole.superAdmin;
+  bool _isConnectedToSupabase = false;
 
   bool get isAuthenticated => _isAuthenticated;
+  String get userId => _userId;
   String get userName => _userName.isNotEmpty ? _userName : 'User';
   String get userEmail => _userEmail;
   String get userPhone => _userPhone;
   String get companyName => _companyName;
   UserRole get role => _role;
+  bool get isConnectedToSupabase => _isConnectedToSupabase;
 
   void updateProfile({String? name, String? email, String? phone}) {
     if (name != null && name.trim().isNotEmpty) {
@@ -73,103 +78,217 @@ class AuthState extends ChangeNotifier {
     setRole(newRole);
   }
 
+  static UserRole _parseRole(String? dbRole) {
+    if (dbRole == null) return UserRole.supervisor;
+    switch (dbRole.toUpperCase()) {
+      case 'SUPER_ADMIN':
+        return UserRole.superAdmin;
+      case 'ADMIN':
+        return UserRole.admin;
+      case 'SUPERVISOR':
+        return UserRole.supervisor;
+      case 'ACCOUNT':
+      case 'ACCOUNTANT':
+        return UserRole.accounts;
+      default:
+        return UserRole.supervisor;
+    }
+  }
+
+  /// Resolves usernames or quick-role keywords to authoritative database emails
+  static String resolveEmail(String input) {
+    final lower = input.trim().toLowerCase();
+    switch (lower) {
+      case 'superadmin':
+      case 'super_admin':
+      case 'super':
+        return 'sachinasinghofficial@gmail.com';
+      case 'admin':
+        return 'sachin.asingh18@gmail.com';
+      case 'supervisor':
+        return 'vikasyadav@gmail.com';
+      case 'account':
+      case 'accountant':
+        return 'sachinacc@gmail.com';
+      default:
+        if (lower.contains('@')) return lower;
+        return '$lower@kfab.in';
+    }
+  }
+
+  /// Verifies active Supabase session on app startup (Auto-Login verification)
+  Future<bool> checkCurrentSession() async {
+    final client = SupabaseConfig.client;
+    if (client == null) {
+      _isConnectedToSupabase = false;
+      return false;
+    }
+
+    try {
+      final session = client.auth.currentSession;
+      final user = client.auth.currentUser;
+
+      if (session != null && user != null) {
+        // Verify user profile and active status in Supabase profiles
+        final profile = await client
+            .from('profiles')
+            .select('full_name, role, status')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (profile != null) {
+          final status = (profile['status'] as String?)?.toUpperCase();
+          if (status == 'INACTIVE') {
+            await client.auth.signOut();
+            _isAuthenticated = false;
+            notifyListeners();
+            return false;
+          }
+
+          final dbRole = profile['role'] as String?;
+          _role = _parseRole(dbRole);
+
+          final fullName = profile['full_name'] as String?;
+          if (fullName != null && fullName.isNotEmpty) {
+            _userName = fullName;
+          } else {
+            _userName = user.email?.split('@')[0] ?? 'User';
+          }
+
+          _userId = user.id;
+          _userEmail = user.email ?? '';
+          _isAuthenticated = true;
+          _isConnectedToSupabase = true;
+          notifyListeners();
+          return true;
+        }
+      }
+      _isConnectedToSupabase = true;
+    } catch (e) {
+      debugPrint('[AuthState] checkCurrentSession error: $e');
+      _isConnectedToSupabase = false;
+    }
+    return false;
+  }
+
+  /// Authoritative login with Supabase Auth validation, connection verification,
+  /// profile status check, and last_login_at timestamp stamping.
   Future<bool> login({
     required String email,
     required String password,
     UserRole? role,
   }) async {
     final client = SupabaseConfig.client;
+    final trimmedInput = email.trim();
+    final trimmedPassword = password.trim();
 
-    // 1. Try Supabase Auth if online and email is formatted
-    if (client != null && email.contains('@')) {
+    if (trimmedInput.isEmpty || trimmedPassword.isEmpty) {
+      throw Exception('Please enter both username/email and password.');
+    }
+
+    // 1. Authoritative Supabase Auth
+    if (client != null) {
+      final resolvedEmail = resolveEmail(trimmedInput);
+
       try {
         final res = await client.auth.signInWithPassword(
-          email: email.trim(),
-          password: password,
+          email: resolvedEmail,
+          password: trimmedPassword,
         );
 
         if (res.user != null) {
-          _isAuthenticated = true;
-          _userEmail = res.user!.email ?? email.trim();
+          _userId = res.user!.id;
+          _userEmail = res.user!.email ?? resolvedEmail;
 
+          // Fetch verified user profile from Supabase profiles table
+          Map<String, dynamic>? profile;
           try {
-            final profile = await client
+            profile = await client
                 .from('profiles')
                 .select('full_name, role, status')
                 .eq('id', res.user!.id)
                 .maybeSingle();
-
-            if (profile != null) {
-              final fullName = profile['full_name'] as String?;
-              final dbRole = profile['role'] as String?;
-              if (fullName != null && fullName.isNotEmpty) {
-                _userName = fullName;
-              }
-              if (dbRole != null) {
-                switch (dbRole.toUpperCase()) {
-                  case 'SUPER_ADMIN':
-                    _role = UserRole.superAdmin;
-                    break;
-                  case 'ADMIN':
-                    _role = UserRole.admin;
-                    break;
-                  case 'SUPERVISOR':
-                    _role = UserRole.supervisor;
-                    break;
-                  case 'ACCOUNT':
-                  case 'ACCOUNTANT':
-                    _role = UserRole.accounts;
-                    break;
-                }
-              }
-            }
           } catch (e) {
             debugPrint('[Supabase] Could not fetch profile: $e');
           }
 
-          if (_userName.isEmpty) {
+          // Validation: Check if deactivated
+          final status = (profile?['status'] as String?)?.toUpperCase();
+          if (status == 'INACTIVE') {
+            await client.auth.signOut();
+            throw Exception('This account has been deactivated. Contact your Super Administrator.');
+          }
+
+          // Extract role from profile
+          final dbRole = profile?['role'] as String?;
+          _role = _parseRole(dbRole);
+
+          final fullName = profile?['full_name'] as String?;
+          if (fullName != null && fullName.isNotEmpty) {
+            _userName = fullName;
+          } else {
             _userName = _userEmail.contains('@') ? _userEmail.split('@')[0] : _userEmail;
           }
+
+          // Stamp last_login_at in database (exact match to Web behavior)
+          final nowIso = DateTime.now().toUtc().toIso8601String();
+          try {
+            await client.from('profiles').update({
+              'last_login_at': nowIso,
+              'updated_at': nowIso,
+            }).eq('id', res.user!.id);
+          } catch (_) {
+            // non-blocking
+          }
+
+          _isAuthenticated = true;
+          _isConnectedToSupabase = true;
           notifyListeners();
           return true;
         }
+      } on AuthException catch (e) {
+        debugPrint('[Supabase Auth] AuthException: ${e.message}');
+        final msg = e.message.toLowerCase();
+        if (msg.contains('invalid login credentials') || msg.contains('invalid grant')) {
+          throw Exception('Invalid username/email or password. Please verify your credentials.');
+        } else if (msg.contains('email not confirmed')) {
+          throw Exception('Email not confirmed. Please check your verification link.');
+        }
+        throw Exception(e.message);
       } catch (e) {
-        debugPrint('[Supabase Auth] Remote sign-in failed, checking offline credentials: $e');
+        debugPrint('[Supabase Auth] Unexpected error: $e');
+        if (e.toString().contains('deactivated')) {
+          rethrow;
+        }
+        throw Exception('Authentication failed: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
 
-    // 2. Fallback to local role & demo credentials
-    _isAuthenticated = true;
-    _userEmail = email.trim();
-    _userName = email.contains('@') ? email.split('@')[0] : email.trim();
+    // 2. Fallback only if Supabase client is uninitialized (e.g. in test runner)
     if (role != null) {
+      _isAuthenticated = true;
+      _userEmail = trimmedInput;
+      _userName = trimmedInput.contains('@') ? trimmedInput.split('@')[0] : trimmedInput;
       _role = role;
-    } else {
-      final lower = email.toLowerCase();
-      if (lower.contains('superadmin') || lower.contains('super')) {
-        _role = UserRole.superAdmin;
-      } else if (lower.contains('supervisor')) {
-        _role = UserRole.supervisor;
-      } else if (lower.contains('account') || lower.contains('acc')) {
-        _role = UserRole.accounts;
-      } else if (lower.contains('admin')) {
-        _role = UserRole.admin;
-      } else {
-        _role = UserRole.superAdmin;
-      }
+      notifyListeners();
+      return true;
     }
-    notifyListeners();
-    return true;
+
+    throw Exception('Database connection unavailable. Please check your network connection.');
   }
 
+  /// Authoritative logout clearing Supabase session
   Future<void> logout() async {
     final client = SupabaseConfig.client;
     if (client != null) {
       try {
         await client.auth.signOut();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Supabase Auth] Sign out error: $e');
+      }
     }
     _isAuthenticated = false;
+    _userId = '';
     _userEmail = '';
     _userName = '';
     notifyListeners();

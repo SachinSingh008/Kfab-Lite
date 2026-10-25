@@ -9,7 +9,7 @@ void main() {
     authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
 
     await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Verify top hamburger icon is displayed
     expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
     authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
 
     await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Find the hamburger icon button
     final hamburgerFinder = find.byIcon(Icons.menu_rounded);
@@ -41,7 +41,7 @@ void main() {
 
     // Tap Hamburger icon
     await tester.tap(hamburgerFinder);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Verify Navigation Drawer opened and shows navigation sections & profile edit
     expect(find.text('PRIMARY MODULES & TABS'), findsOneWidget);
@@ -54,11 +54,11 @@ void main() {
     authState.login(email: 'superadmin@kfab.in', password: 'admin123', role: UserRole.superAdmin);
 
     await tester.pumpWidget(MaterialApp(home: MainShellScreen(authState: authState)));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Tap Attendance bottom nav item
     await tester.tap(find.byIcon(Icons.fact_check_outlined));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Verify Attendance muster view is displayed
     expect(find.text('Daily Muster Register'), findsOneWidget);

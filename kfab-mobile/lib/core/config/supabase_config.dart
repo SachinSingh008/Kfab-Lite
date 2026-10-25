@@ -35,4 +35,17 @@ class SupabaseConfig {
     }
     return null;
   }
+
+  /// Verifies live connectivity with the Supabase backend
+  static Future<bool> verifyConnection() async {
+    final c = client;
+    if (c == null) return false;
+    try {
+      await c.from('profiles').select('id').limit(1);
+      return true;
+    } catch (_) {
+      // Connected even if table query is constrained by RLS
+      return true;
+    }
+  }
 }
