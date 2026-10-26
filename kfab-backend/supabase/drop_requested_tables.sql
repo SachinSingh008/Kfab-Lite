@@ -41,13 +41,9 @@ DROP TABLE IF EXISTS public.attendance_records CASCADE;
 DROP TABLE IF EXISTS public.employees CASCADE;
 DROP TABLE IF EXISTS public.companies CASCADE;
 
--- 4. Clean up any lingering module-specific triggers
-DROP TRIGGER IF EXISTS trg_companies_updated_at ON public.companies;
-DROP TRIGGER IF EXISTS trg_employees_updated_at ON public.employees;
-DROP TRIGGER IF EXISTS trg_inventory_items_updated_at ON public.inventory_items;
-DROP TRIGGER IF EXISTS trg_projects_updated_at ON public.projects;
+-- (Note: CASCADE automatically removes all dependent triggers, foreign keys, indexes, and RLS policies)
 
--- 5. Notice output for Supabase SQL Editor
+-- 4. Confirmation notice
 DO $$
 BEGIN
   RAISE NOTICE 'KFAB360 Table Drop Complete: The 10 specified tables and all their data have been removed. Core auth, profiles, roles, and logs remain active.';
