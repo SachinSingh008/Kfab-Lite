@@ -177,11 +177,11 @@ export default function KfabBasicApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Easily Removable Sample Demo Data State
-  const [sampleDataActive, setSampleDataActive] = useState<boolean>(true);
-  const [workers, setWorkers] = useState<WorkerRecord[]>(SAMPLE_WORKERS);
-  const [stock, setStock] = useState<StockMaterial[]>(SAMPLE_STOCK);
-  const [transactions, setTransactions] = useState<SupplyTransaction[]>(SAMPLE_TRANSACTIONS);
+  // Clean Slate State (Zero Mock Data)
+  const [sampleDataActive, setSampleDataActive] = useState<boolean>(false);
+  const [workers, setWorkers] = useState<WorkerRecord[]>([]);
+  const [stock, setStock] = useState<StockMaterial[]>([]);
+  const [transactions, setTransactions] = useState<SupplyTransaction[]>([]);
 
   useEffect(() => {
     const session = getStoredSession();
@@ -189,9 +189,9 @@ export default function KfabBasicApp() {
       setCurrentUser(session);
     }
 
-    // Hydrate sample data mode from localStorage
+    // Default sample data to inactive (zero mock data)
     const storedSamplePref = typeof window !== "undefined" ? localStorage.getItem("kfab360_sample_data_active") : null;
-    const isSampleActive = storedSamplePref !== null ? storedSamplePref === "true" : true;
+    const isSampleActive = storedSamplePref !== null ? storedSamplePref === "true" : false;
     setSampleDataActive(isSampleActive);
 
     if (isSampleActive) {
