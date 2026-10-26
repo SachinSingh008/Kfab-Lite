@@ -301,25 +301,20 @@ export function Kfab360Sidebar({
       </div>
 
       {/* ============================================================ */}
-      {/* 2. SERVICENOW FILTER NAVIGATOR (Search Input) */}
+      {/* 2. SEARCH / FILTER NAVIGATOR (Image 1 & 2 inspired) */}
       {/* ============================================================ */}
       {!isShrunk && (
-        <div
-          className="px-2.5 pt-2.5 pb-2 border-b"
-          style={{ borderColor: "var(--role-sidebar-border)" }}
-        >
+        <div className="px-3 pt-2.5 pb-2">
           <div className="relative flex items-center">
-            <Search className="absolute left-2.5 size-3.5 text-slate-400 pointer-events-none" />
+            <Search className="absolute left-3 size-3.5 text-slate-400 pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter navigator..."
-              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border transition-all duration-150 outline-none placeholder:text-slate-400 font-medium"
+              placeholder="Search navigation..."
+              className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-slate-200/90 transition-all duration-150 outline-none placeholder:text-slate-400 font-medium bg-white/80 shadow-2xs focus:border-slate-400"
               style={{
-                backgroundColor: "var(--role-sidebar-subtle)",
-                borderColor: searchQuery ? "var(--role-accent)" : "var(--role-sidebar-border)",
                 color: "var(--role-sidebar-fg)",
               }}
             />
@@ -327,43 +322,16 @@ export function Kfab360Sidebar({
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 p-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                title="Clear filter"
+                className="absolute right-2.5 p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                title="Clear search"
               >
                 <X className="size-3 stroke-[2.5]" />
               </button>
             ) : (
-              <span
-                className="absolute right-2 text-[9.5px] font-mono px-1 py-0.2 rounded border text-slate-400 pointer-events-none"
-                style={{
-                  backgroundColor: "var(--role-sidebar-bg)",
-                  borderColor: "var(--role-sidebar-border)",
-                }}
-              >
+              <span className="absolute right-2.5 text-[9.5px] font-mono px-1 py-0.2 rounded border border-slate-200 text-slate-400 pointer-events-none bg-slate-50">
                 /
               </span>
             )}
-          </div>
-
-          {/* ServiceNow Header Ribbon: Modules / Accordion Controls */}
-          <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
-            <span style={{ color: "var(--role-sidebar-section-title)" }}>
-              {isSearching ? "FILTER RESULTS" : "APPLICATION NAVIGATOR"}
-            </span>
-            <div className="flex items-center gap-1.5">
-              {openFolder !== null && !isSearching && (
-                <button
-                  type="button"
-                  onClick={handleMinimizeAll}
-                  title="Minimize Current Folder"
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all hover:bg-[var(--role-sidebar-item-hover-bg)] cursor-pointer"
-                  style={{ color: "var(--role-sidebar-section-title)" }}
-                >
-                  <Minus className="size-3 stroke-[2.5]" />
-                  <span>minimize</span>
-                </button>
-              )}
-            </div>
           </div>
         </div>
       )}
@@ -371,10 +339,15 @@ export function Kfab360Sidebar({
       {/* ============================================================ */}
       {/* 3. NAVIGATION ITEMS & ACCORDION FOLDERS */}
       {/* ============================================================ */}
-      <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar">
-        {/* ============================================================ */}
-        {/* TOP-LEVEL 1: DASHBOARD (Single Root Item - No Folder) */}
-        {/* ============================================================ */}
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
+        {/* SECTION 1: OVERVIEW (Image 1 'Folders' inspired) */}
+        {!isShrunk && (
+          <div className="text-[11px] font-semibold text-slate-400/90 px-3 pt-1.5 pb-1 tracking-normal">
+            Overview
+          </div>
+        )}
+
+        {/* Root 1: Dashboard */}
         {matchesSearch(getRoleDashboardLabel()) && (
           <ServiceNowRootItem
             active={currentTab === "dashboard"}
@@ -382,13 +355,11 @@ export function Kfab360Sidebar({
             icon={LayoutDashboard}
             label={getRoleDashboardLabel()}
             isShrunk={isShrunk}
-            badge="LIVE"
+            count="24"
           />
         )}
 
-        {/* ============================================================ */}
-        {/* TOP-LEVEL 2: LOGS (Single Root Item - No Folder) */}
-        {/* ============================================================ */}
+        {/* Root 2: Logs */}
         {matchesSearch("Activity & Audit Logs") && (
           <ServiceNowRootItem
             active={currentTab === "logs"}
@@ -396,7 +367,37 @@ export function Kfab360Sidebar({
             icon={FileText}
             label="Activity & Audit Logs"
             isShrunk={isShrunk}
+            count="7d"
           />
+        )}
+
+        {/* Root 3: Team Channels & Chat */}
+        {matchesSearch("Team Channels & Chat") && (
+          <ServiceNowRootItem
+            active={currentTab === "chat"}
+            onClick={() => onSelectTab("chat")}
+            icon={MessageSquare}
+            label="Team Channels & Chat"
+            isShrunk={isShrunk}
+            badge="LIVE"
+          />
+        )}
+
+        {/* SECTION 2: WORKSPACE OPERATIONS (Image 1 'Neuralink Space' inspired) */}
+        {!isShrunk && (
+          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400/90 px-3 pt-3.5 pb-1 tracking-normal">
+            <span>Workspace Operations</span>
+            {openFolder !== null && !isSearching && (
+              <button
+                type="button"
+                onClick={handleMinimizeAll}
+                title="Minimize open section"
+                className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                minimize
+              </button>
+            )}
+          </div>
         )}
 
         {/* ============================================================ */}
@@ -642,18 +643,6 @@ export function Kfab360Sidebar({
           </ServiceNowModuleCategory>
         )}
 
-        {/* ============================================================ */}
-        {/* TOP-LEVEL 3: TEAM CHAT (Single Root Item - No Folder) */}
-        {/* ============================================================ */}
-        {matchesSearch("Team Channels & Chat") && (
-          <ServiceNowRootItem
-            active={currentTab === "chat"}
-            onClick={() => onSelectTab("chat")}
-            icon={MessageSquare}
-            label="Team Channels & Chat"
-            isShrunk={isShrunk}
-          />
-        )}
       </nav>
 
       {/* ============================================================ */}
@@ -718,7 +707,7 @@ export function Kfab360Sidebar({
 }
 
 // ============================================================================
-// SERVICENOW STYLE ACCORDION MODULE CATEGORY (Application Menu)
+// IMAGE 1 INSPIRED ACCORDION MODULE CATEGORY (Expandable with count on right)
 // ============================================================================
 
 interface ServiceNowModuleCategoryProps {
@@ -748,71 +737,40 @@ function ServiceNowModuleCategory({
   }
 
   return (
-    <div className="select-none mb-1">
-      {/* ServiceNow Application Menu Header */}
+    <div className="select-none mb-0.5">
+      {/* Category Header Row (Chevron + Icon + Title + Count) */}
       <button
         type="button"
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
+        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
           isOpen
-            ? "bg-[var(--role-sidebar-subtle)] font-bold shadow-2xs border border-[var(--role-sidebar-border)]/70"
-            : "hover:bg-[var(--role-sidebar-item-hover-bg)] font-semibold border border-transparent"
+            ? "font-semibold text-slate-900 bg-black/5 dark:text-white"
+            : "text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium"
         }`}
-        style={{
-          color: isOpen ? "var(--role-sidebar-fg)" : "var(--role-sidebar-section-title)",
-        }}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Rotating Chevron Indicator */}
+        <div className="flex items-center gap-2 min-w-0">
           <span
             className={`shrink-0 transition-transform duration-200 ${
-              isOpen
-                ? "rotate-90 text-[var(--role-accent)]"
-                : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500"
+              isOpen ? "rotate-90 text-slate-800" : "text-slate-400 group-hover:text-slate-600"
             }`}
           >
-            <ChevronRight className="size-3.5 stroke-[2.5]" />
+            <ChevronRight className="size-3.5 stroke-[2.2]" />
           </span>
-
-          {/* ServiceNow Domain Icon Frame */}
-          <div
-            className={`size-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-              isOpen
-                ? "bg-[var(--role-primary)] text-white shadow-2xs"
-                : "bg-[var(--role-sidebar-subtle)] text-[var(--role-sidebar-fg)] border border-[var(--role-sidebar-border)]/80 group-hover:border-[var(--role-accent)]"
-            }`}
-          >
-            <Icon className="size-3.5 shrink-0" />
-          </div>
-
-          {/* Category Title */}
-          <span
-            className="truncate uppercase text-[11px] tracking-wider"
-            style={{ color: "var(--role-sidebar-fg)" }}
-          >
-            {label}
-          </span>
+          <Icon className="size-4 shrink-0 text-slate-500 group-hover:text-slate-800 transition-colors" />
+          <span className="truncate text-[13px]">{label}</span>
         </div>
 
-        {/* Counter Badge */}
         {count !== undefined && (
-          <span
-            className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold tracking-wider shrink-0 transition-colors ${
-              isOpen
-                ? "bg-[var(--role-primary)] text-white"
-                : "bg-[var(--role-sidebar-bg)] text-slate-500 border border-[var(--role-sidebar-border)] group-hover:border-slate-300"
-            }`}
-          >
+          <span className="text-[11px] font-medium text-slate-400 shrink-0">
             {count}
           </span>
         )}
       </button>
 
-      {/* Indented Module Items with ServiceNow Vertical Tree Hierarchy Guide */}
+      {/* Indented Module Items */}
       {isOpen && (
         <div
-          className="ml-4 pl-2.5 border-l-2 my-1 space-y-0.5 transition-all duration-200 ease-in-out"
-          style={{ borderColor: "var(--role-sidebar-border)" }}
+          className="ml-4 pl-2.5 border-l border-slate-200/80 my-1 space-y-0.5 transition-all duration-200 ease-in-out"
         >
           {children}
         </div>
@@ -822,7 +780,7 @@ function ServiceNowModuleCategory({
 }
 
 // ============================================================================
-// SERVICENOW STYLE MODULE ITEM (Sub-Item / Leaf View)
+// IMAGE 1 INSPIRED MODULE ITEM (Sub-Item inside open category)
 // ============================================================================
 
 interface ServiceNowModuleItemProps {
@@ -847,55 +805,29 @@ function ServiceNowModuleItem({
       onClick={onClick}
       title={isShrunk ? label : undefined}
       className={`relative w-full flex items-center ${
-        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-1.5 rounded-lg"
-      } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group ${
+        isShrunk ? "justify-center p-2 rounded-xl" : "justify-between px-2.5 py-1.5 rounded-lg"
+      } text-left text-xs transition-all duration-150 cursor-pointer group ${
         active
-          ? "font-bold shadow-xs"
-          : "font-medium hover:bg-[var(--role-sidebar-item-hover-bg)]"
+          ? "bg-[var(--role-sidebar-item-active-bg)] text-[var(--role-sidebar-item-active-fg)] shadow-xs font-semibold"
+          : "text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium"
       }`}
-      style={
-        active
-          ? {
-              backgroundColor: "var(--role-sidebar-item-active-bg)",
-              color: "var(--role-sidebar-item-active-fg)",
-            }
-          : {
-              color: "var(--role-sidebar-item-fg)",
-            }
-      }
     >
-      {/* ServiceNow Active Left Accent Indicator Pill */}
-      {active && (
-        <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4.5 rounded-r-full"
-          style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
-        />
-      )}
-
       <div className="flex items-center gap-2 min-w-0">
         <Icon
           className={`size-3.5 shrink-0 transition-opacity ${
-            active ? "opacity-100" : "opacity-65 group-hover:opacity-100"
+            active ? "opacity-100" : "opacity-60 group-hover:opacity-100"
           }`}
         />
-        {!isShrunk && <span className="truncate text-[11.5px]">{label}</span>}
+        {!isShrunk && <span className="truncate text-[12px]">{label}</span>}
       </div>
 
       {!isShrunk && badge && (
         <span
-          className="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider shrink-0"
-          style={
+          className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider shrink-0 ${
             active
-              ? {
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  color: "inherit",
-                }
-              : {
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  color: "var(--role-sidebar-fg)",
-                  border: "1px solid var(--role-sidebar-border)",
-                }
-          }
+              ? "bg-white/20 text-white"
+              : "bg-slate-100 text-slate-500 border border-slate-200"
+          }`}
         >
           {badge}
         </span>
@@ -905,7 +837,7 @@ function ServiceNowModuleItem({
 }
 
 // ============================================================================
-// SERVICENOW STYLE TOP-LEVEL ROOT ITEM (Dashboard, Logs, Chat)
+// IMAGE 1 INSPIRED TOP-LEVEL ROOT ITEM (Dashboard, Logs, Chat)
 // ============================================================================
 
 interface ServiceNowRootItemProps {
@@ -914,6 +846,7 @@ interface ServiceNowRootItemProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   badge?: string;
+  count?: string | number;
   isShrunk?: boolean;
 }
 
@@ -923,6 +856,7 @@ function ServiceNowRootItem({
   icon: Icon,
   label,
   badge,
+  count,
   isShrunk = false,
 }: ServiceNowRootItemProps) {
   return (
@@ -930,61 +864,31 @@ function ServiceNowRootItem({
       onClick={onClick}
       title={isShrunk ? label : undefined}
       className={`relative w-full flex items-center ${
-        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-2 rounded-xl"
-      } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group mb-1 ${
+        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-3 py-2 rounded-xl"
+      } text-left text-xs transition-all duration-150 cursor-pointer group mb-0.5 ${
         active
-          ? "font-bold shadow-xs"
-          : "font-semibold hover:bg-[var(--role-sidebar-item-hover-bg)]"
+          ? "bg-[var(--role-sidebar-item-active-bg)] text-[var(--role-sidebar-item-active-fg)] shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-semibold"
+          : "text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium"
       }`}
-      style={
-        active
-          ? {
-              backgroundColor: "var(--role-sidebar-item-active-bg)",
-              color: "var(--role-sidebar-item-active-fg)",
-            }
-          : {
-              color: "var(--role-sidebar-fg)",
-            }
-      }
     >
-      {/* ServiceNow Active Left Accent Indicator Pill */}
-      {active && (
-        <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-5 rounded-r-full"
-          style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
-        />
-      )}
-
       <div className="flex items-center gap-2.5 min-w-0">
-        <div
-          className={`size-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-            active
-              ? "bg-[var(--role-sidebar-item-active-accent)] text-white shadow-2xs"
-              : "bg-[var(--role-sidebar-subtle)] text-[var(--role-sidebar-fg)] border border-[var(--role-sidebar-border)]/80 group-hover:border-[var(--role-accent)]"
+        <Icon
+          className={`size-4 shrink-0 ${
+            active ? "opacity-100" : "text-slate-500 group-hover:text-slate-800 opacity-80"
           }`}
-        >
-          <Icon className="size-3.5 shrink-0" />
-        </div>
-        {!isShrunk && <span className="truncate text-xs font-semibold">{label}</span>}
+        />
+        {!isShrunk && <span className="truncate text-[13px]">{label}</span>}
       </div>
 
-      {!isShrunk && badge && (
+      {!isShrunk && (badge || count !== undefined) && (
         <span
-          className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0"
-          style={
+          className={`text-[11px] font-medium shrink-0 ${
             active
-              ? {
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  color: "inherit",
-                }
-              : {
-                  backgroundColor: "var(--role-sidebar-subtle)",
-                  color: "var(--role-sidebar-fg)",
-                  border: "1px solid var(--role-sidebar-border)",
-                }
-          }
+              ? "px-1.5 py-0.2 rounded-full bg-white/20 text-white font-bold text-[10px]"
+              : "text-slate-400"
+          }`}
         >
-          {badge}
+          {badge ?? count}
         </span>
       )}
     </button>

@@ -26,21 +26,21 @@ class AppTheme {
   // ============================================================
   // ROLE PALETTES
   // ============================================================
-  // 1. Super Admin: Authoritative Slate #0F172A + Industrial Amber #F59E0B (Same as it is)
-  static const Color superAdminPrimary = Color(0xFF0F172A);
-  static const Color superAdminAccent = Color(0xFFF59E0B);
+  // 1. Super Admin: Monochromatic Obsidian Black & Platinum Gray (B/W Theme)
+  static const Color superAdminPrimary = Color(0xFF09090B);
+  static const Color superAdminAccent = Color(0xFF27272A);
 
-  // 2. Admin: Crimson Red #DC2626
-  static const Color adminPrimary = Color(0xFFDC2626);
-  static const Color adminAccent = Color(0xFFEF4444);
+  // 2. Admin: KFAB Logo Royal Blue #00288A + Electric Blue #2563EB
+  static const Color adminPrimary = Color(0xFF00288A);
+  static const Color adminAccent = Color(0xFF2563EB);
 
-  // 3. Supervisor: Regular Golden Yellow #EAB308 / #CA8A04
-  static const Color supervisorPrimary = Color(0xFFCA8A04);
-  static const Color supervisorAccent = Color(0xFFEAB308);
+  // 3. Supervisor: Crimson Red #DC2626
+  static const Color supervisorPrimary = Color(0xFFDC2626);
+  static const Color supervisorAccent = Color(0xFFEF4444);
 
-  // 4. Accountant: Emerald Green #16A34A
-  static const Color accountantPrimary = Color(0xFF16A34A);
-  static const Color accountantAccent = Color(0xFF22C55E);
+  // 4. Accountant: Fresh Lime & Mint Green (Image 3 Palette)
+  static const Color accountantPrimary = Color(0xFF15803D);
+  static const Color accountantAccent = Color(0xFF65C728);
 
   static Color getPrimaryForRole(UserRole role) {
     switch (role) {
@@ -71,13 +71,13 @@ class AppTheme {
   static List<Color> getGradientForRole(UserRole role) {
     switch (role) {
       case UserRole.superAdmin:
-        return const [Color(0xFF0F172A), Color(0xFF1E293B)];
+        return const [Color(0xFF09090B), Color(0xFF18181B)];
       case UserRole.admin:
-        return const [Color(0xFF991B1B), Color(0xFFDC2626)];
+        return const [Color(0xFF001F6D), Color(0xFF00288A)];
       case UserRole.supervisor:
-        return const [Color(0xFF854D0E), Color(0xFFCA8A04)];
+        return const [Color(0xFF991B1B), Color(0xFFDC2626)];
       case UserRole.accounts:
-        return const [Color(0xFF14532D), Color(0xFF16A34A)];
+        return const [Color(0xFF14532D), Color(0xFF15803D)];
     }
   }
 
@@ -85,13 +85,13 @@ class AppTheme {
   static List<Color> getLightBgGradientForRole(UserRole role) {
     switch (role) {
       case UserRole.superAdmin:
-        return const [Color(0xFFF8FAFC), Color(0xFFFFFFFF)];
+        return const [Color(0xFFF8F9FA), Color(0xFFFFFFFF)];
       case UserRole.admin:
-        return const [Color(0xFFFEF2F2), Color(0xFFFFF5F5), Color(0xFFFFFFFF)];
+        return const [Color(0xFFF0F7FF), Color(0xFFFFFFFF)];
       case UserRole.supervisor:
-        return const [Color(0xFFFEFCE8), Color(0xFFFFFDEB), Color(0xFFFFFFFF)];
+        return const [Color(0xFFFFF5F5), Color(0xFFFFFFFF)];
       case UserRole.accounts:
-        return const [Color(0xFFF0FDF4), Color(0xFFF5FDF7), Color(0xFFFFFFFF)];
+        return const [Color(0xFFF7FCF2), Color(0xFFFFFFFF)];
     }
   }
 
@@ -99,13 +99,13 @@ class AppTheme {
   static Color getLightBgColorForRole(UserRole role) {
     switch (role) {
       case UserRole.superAdmin:
-        return const Color(0xFFF8FAFC);
+        return const Color(0xFFF8F9FA);
       case UserRole.admin:
-        return const Color(0xFFFEF2F2);
+        return const Color(0xFFF0F7FF);
       case UserRole.supervisor:
-        return const Color(0xFFFEFCE8);
+        return const Color(0xFFFFF5F5);
       case UserRole.accounts:
-        return const Color(0xFFF0FDF4);
+        return const Color(0xFFF7FCF2);
     }
   }
 

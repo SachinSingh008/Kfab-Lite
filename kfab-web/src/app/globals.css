@@ -36,55 +36,55 @@
 /* DYNAMIC ROLE-BASED COLOR THEMES */
 /* ============================================================ */
 
-/* 1. Super Admin: Authoritative Slate #0F172A + Amber #F59E0B */
+/* 1. Super Admin: Sleek Platinum Gray, White & Obsidian Black (B/W Monochrome) */
 :root,
 [data-role-theme="SUPER_ADMIN"] {
-  --role-primary: #0f172a;
-  --role-primary-hover: #1e293b;
-  --role-accent: #f59e0b;
-  --role-accent-hover: #d97706;
-  --role-badge-bg: #f1f5f9;
-  --role-badge-text: #0f172a;
-  --role-border: #e2e8f0;
-  --role-subtle: #f8fafc;
-  --role-header-border: #cbd5e1;
-  --role-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.15);
+  --role-primary: #09090b;
+  --role-primary-hover: #18181b;
+  --role-accent: #27272a;
+  --role-accent-hover: #09090b;
+  --role-badge-bg: #18181b;
+  --role-badge-text: #ffffff;
+  --role-border: #e4e4e7;
+  --role-subtle: #f4f4f5;
+  --role-header-border: #e4e4e7;
+  --role-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
   --role-card-bg: #ffffff;
-  --role-content-bg: #f8fafc;
-  --role-header-title: #0f172a;
+  --role-content-bg: #f8f9fa;
+  --role-header-title: #09090b;
 
-  /* Sidebar: Authoritative Slate / Clean White */
-  --role-sidebar-bg: #ffffff;
-  --role-sidebar-fg: #0f172a;
-  --role-sidebar-border: #e2e8f0;
-  --role-sidebar-subtle: #f8fafc;
-  --role-sidebar-section-title: #64748b;
-  --role-sidebar-item-fg: #475569;
-  --role-sidebar-item-hover-bg: #f1f5f9;
-  --role-sidebar-item-hover-fg: #0f172a;
-  --role-sidebar-item-active-bg: #0f172a;
+  /* Sidebar: Modern Neutral Off-White / Zinc Gray (Image 1 inspired) */
+  --role-sidebar-bg: #f8f9fa;
+  --role-sidebar-fg: #09090b;
+  --role-sidebar-border: #e4e4e7;
+  --role-sidebar-subtle: #ffffff;
+  --role-sidebar-section-title: #71717a;
+  --role-sidebar-item-fg: #3f3f46;
+  --role-sidebar-item-hover-bg: #f4f4f5;
+  --role-sidebar-item-hover-fg: #09090b;
+  --role-sidebar-item-active-bg: #09090b;
   --role-sidebar-item-active-fg: #ffffff;
-  --role-sidebar-item-active-accent: #f59e0b;
+  --role-sidebar-item-active-accent: #ffffff;
 
-  /* Navbar: Clean White */
+  /* Navbar: Clean Monochrome */
   --role-navbar-bg: #ffffff;
-  --role-navbar-fg: #0f172a;
-  --role-navbar-border: #e2e8f0;
-  --role-navbar-muted: #64748b;
-  --role-navbar-badge-bg: #f1f5f9;
-  --role-navbar-badge-fg: #0f172a;
-  --role-navbar-search-bg: #f8fafc;
-  --role-navbar-search-border: #e2e8f0;
-  --role-navbar-search-text: #0f172a;
+  --role-navbar-fg: #09090b;
+  --role-navbar-border: #e4e4e7;
+  --role-navbar-muted: #71717a;
+  --role-navbar-badge-bg: #18181b;
+  --role-navbar-badge-fg: #ffffff;
+  --role-navbar-search-bg: #f4f4f5;
+  --role-navbar-search-border: #e4e4e7;
+  --role-navbar-search-text: #09090b;
 
-  /* Div Headings: Slate */
-  --role-div-heading-color: #0f172a;
-  --role-div-heading-category-bg: #f1f5f9;
-  --role-div-heading-category-fg: #64748b;
-  --role-div-heading-border: #e2e8f0;
+  /* Div Headings: Slate/Monochrome */
+  --role-div-heading-color: #09090b;
+  --role-div-heading-category-bg: #f4f4f5;
+  --role-div-heading-category-fg: #52525b;
+  --role-div-heading-border: #e4e4e7;
 }
 
-/* 2. Admin: KFAB LOGO ROYAL BLUE THEME (#00288A / Light Ice Blue Surface + Deep Logo Blue Selected Tab) */
+/* 2. Admin: KFAB ROYAL BLUE THEME (Matching Image 2) */
 [data-role-theme="ADMIN"] {
   --role-primary: #00288a;
   --role-primary-hover: #001f6d;
@@ -95,38 +95,38 @@
   --role-border: #bfdbfe;
   --role-subtle: #f0f7ff;
   --role-header-border: #bfdbfe;
-  --role-shadow: 0 4px 14px 0 rgba(0, 40, 138, 0.15);
+  --role-shadow: 0 4px 16px 0 rgba(0, 40, 138, 0.15);
   --role-card-bg: #ffffff;
-  --role-content-bg: #f0f7ff;
+  --role-content-bg: #f1f5f9;
   --role-header-title: #00288a;
 
-  /* Sidebar: Light KFAB Blue Theme */
-  --role-sidebar-bg: #f0f7ff;
+  /* Sidebar: Clean light surface with blue highlights */
+  --role-sidebar-bg: #f8fafc;
   --role-sidebar-fg: #0f172a;
-  --role-sidebar-border: #bfdbfe;
-  --role-sidebar-subtle: #dbeafe;
-  --role-sidebar-section-title: #00288a;
-  --role-sidebar-item-fg: #1e3a8a;
-  --role-sidebar-item-hover-bg: #dbeafe;
-  --role-sidebar-item-hover-fg: #001f6d;
+  --role-sidebar-border: #e2e8f0;
+  --role-sidebar-subtle: #eff6ff;
+  --role-sidebar-section-title: #64748b;
+  --role-sidebar-item-fg: #334155;
+  --role-sidebar-item-hover-bg: #eff6ff;
+  --role-sidebar-item-hover-fg: #00288a;
   --role-sidebar-item-active-bg: #00288a;
   --role-sidebar-item-active-fg: #ffffff;
   --role-sidebar-item-active-accent: #60a5fa;
 
-  /* Navbar: Light KFAB Blue Theme */
-  --role-navbar-bg: #f0f7ff;
-  --role-navbar-fg: #00288a;
-  --role-navbar-border: #bfdbfe;
-  --role-navbar-muted: #1e40af;
-  --role-navbar-badge-bg: #dbeafe;
-  --role-navbar-badge-fg: #00288a;
+  /* Navbar: Royal Blue matching Image 2 */
+  --role-navbar-bg: #00288a;
+  --role-navbar-fg: #ffffff;
+  --role-navbar-border: #001f6d;
+  --role-navbar-muted: #bfdbfe;
+  --role-navbar-badge-bg: rgba(255, 255, 255, 0.2);
+  --role-navbar-badge-fg: #ffffff;
   --role-navbar-search-bg: #ffffff;
-  --role-navbar-search-border: #93c5fd;
+  --role-navbar-search-border: #bfdbfe;
   --role-navbar-search-text: #0f172a;
 
   /* Div Headings: KFAB Blue */
   --role-div-heading-color: #00288a;
-  --role-div-heading-category-bg: #dbeafe;
+  --role-div-heading-category-bg: #eff6ff;
   --role-div-heading-category-fg: #00288a;
   --role-div-heading-border: #bfdbfe;
 }
@@ -178,53 +178,52 @@
   --role-div-heading-border: #fca5a5;
 }
 
-/* 4. Accountant: LIGHT GREEN (Sidebar & Navbar) + DARK GREEN (Selected Tab / Section) */
+/* 4. Accountant: FRESH LIME & MINT GREEN (Matching Image 3) */
 [data-role-theme="ACCOUNTANT"],
 [data-role-theme="ACCOUNTS"] {
   --role-primary: #15803d;
   --role-primary-hover: #166534;
-  --role-accent: #22c55e;
-  --role-accent-hover: #15803d;
-  --role-badge-bg: #dcfce7;
-  --role-badge-text: #166534;
-  --role-border: #86efac;
-  --role-subtle: #f0fdf4;
+  --role-accent: #65c728;
+  --role-accent-hover: #16a34a;
+  --role-badge-bg: #edfae0;
+  --role-badge-text: #14532d;
+  --role-border: #bbf7d0;
+  --role-subtle: #f4fce8;
   --role-header-border: #86efac;
-  --role-shadow: 0 4px 14px 0 rgba(21, 128, 61, 0.15);
+  --role-shadow: 0 4px 14px 0 rgba(21, 128, 61, 0.12);
   --role-card-bg: #ffffff;
-  --role-content-bg: #f0fdf4;
-  --role-header-title: #15803d;
+  --role-content-bg: #f7fcf2;
+  --role-header-title: #14532d;
 
-  /* Sidebar: Light Green Theme */
-  --role-sidebar-bg: #f0fdf4;
-  --role-sidebar-fg: #0f172a;
-  --role-sidebar-border: #bbf7d0;
-  --role-sidebar-subtle: #dcfce7;
-  --role-sidebar-section-title: #14532d;
+  /* Sidebar: Light Fresh Lime Tinted Surface (Image 3) */
+  --role-sidebar-bg: #f7fcf2;
+  --role-sidebar-fg: #14532d;
+  --role-sidebar-border: #dcfce7;
+  --role-sidebar-subtle: #edfae0;
+  --role-sidebar-section-title: #4d7c0f;
   --role-sidebar-item-fg: #166534;
-  --role-sidebar-item-hover-bg: #dcfce7;
-  --role-sidebar-item-hover-fg: #052e16;
-  /* Selected Tab / Section: Dark Green */
+  --role-sidebar-item-hover-bg: #edfae0;
+  --role-sidebar-item-hover-fg: #14532d;
   --role-sidebar-item-active-bg: #15803d;
   --role-sidebar-item-active-fg: #ffffff;
-  --role-sidebar-item-active-accent: #22c55e;
+  --role-sidebar-item-active-accent: #86efac;
 
-  /* Navbar: Light Green Theme */
-  --role-navbar-bg: #f0fdf4;
+  /* Navbar: Clean white with fresh lime border & accents */
+  --role-navbar-bg: #ffffff;
   --role-navbar-fg: #14532d;
-  --role-navbar-border: #bbf7d0;
-  --role-navbar-muted: #166534;
-  --role-navbar-badge-bg: #dcfce7;
+  --role-navbar-border: #dcfce7;
+  --role-navbar-muted: #4d7c0f;
+  --role-navbar-badge-bg: #edfae0;
   --role-navbar-badge-fg: #14532d;
-  --role-navbar-search-bg: #ffffff;
-  --role-navbar-search-border: #86efac;
-  --role-navbar-search-text: #0f172a;
+  --role-navbar-search-bg: #f7fcf2;
+  --role-navbar-search-border: #bbf7d0;
+  --role-navbar-search-text: #14532d;
 
-  /* Div Headings: Dark Green */
-  --role-div-heading-color: #15803d;
-  --role-div-heading-category-bg: #dcfce7;
-  --role-div-heading-category-fg: #14532d;
-  --role-div-heading-border: #86efac;
+  /* Div Headings: Forest & Lime Green */
+  --role-div-heading-color: #14532d;
+  --role-div-heading-category-bg: #edfae0;
+  --role-div-heading-category-fg: #15803d;
+  --role-div-heading-border: #bbf7d0;
 }
 
 body {

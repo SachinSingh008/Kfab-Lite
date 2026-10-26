@@ -320,7 +320,7 @@ export default function KfabBasicApp() {
   const activeTabName = TAB_DISPLAY_NAMES[currentTab] || "Dashboard";
 
   return (
-    <div data-role-theme={currentUser.role} className="flex h-screen w-full overflow-hidden bg-[#F8FAFC]">
+    <div data-role-theme={currentUser.role} className="flex h-screen w-full overflow-hidden bg-[var(--role-content-bg)]">
       {/* 1. KFAB360 ENTERPRISE LIGHT SIDEBAR */}
       <Kfab360Sidebar
         currentTab={currentTab}
