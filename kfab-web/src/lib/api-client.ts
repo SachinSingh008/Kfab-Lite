@@ -804,11 +804,12 @@ export async function apiCreateUserLog(data: { event: string; remarks?: string }
     user_email: user?.username || '',
   };
 
-  // 1. Authoritative direct Supabase insert into audit_logs
+  // 1. Authoritative direct Supabase insert into audit_logs (Single write, prevents duplicate API calls)
+  let directInserted = false;
   try {
     const supabase = createClient();
     if (supabase) {
-      await supabase.from('audit_logs').insert({
+      const { error } = await supabase.from('audit_logs').insert({
         id: logId,
         actor_id: user?.id && user.id.includes('-') ? user.id : null,
         action: 'USER_LOG',
@@ -826,19 +827,26 @@ export async function apiCreateUserLog(data: { event: string; remarks?: string }
         },
         created_at: nowIso,
       });
+      if (!error) {
+        directInserted = true;
+      } else {
+        console.warn('Direct Supabase insert into audit_logs returned error:', error);
+      }
     }
   } catch (err) {
     console.warn('Direct Supabase insert into audit_logs failed:', err);
   }
 
-  // 2. Also notify Fastify Backend if available
-  try {
-    await apiRequest<{ data: UserLogDTO }>('/api/v1/logs', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  } catch {
-    // Non-blocking
+  // 2. Only fallback to Fastify backend if direct Supabase insert did NOT succeed
+  if (!directInserted) {
+    try {
+      await apiRequest<{ data: UserLogDTO }>('/api/v1/logs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch {
+      // Non-blocking fallback
+    }
   }
 
   // 3. Local storage update
@@ -884,7 +892,7 @@ export async function apiGetMyLogs(params?: {
 
       const { data, count, error } = await query;
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         let logs: UserLogDTO[] = data.map((row: any) => {
           const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
           const det = row.details || {};
@@ -984,7 +992,7 @@ export async function apiGetAllLogs(params?: {
 
       const { data, count, error } = await query;
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         let logs: UserLogDTO[] = data.map((row: any) => {
           const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
           const det = row.details || {};
@@ -1125,7 +1133,7 @@ export async function apiGetSystemLogs(params?: {
 
       const { data, count, error } = await query;
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const logs: SystemLogDTO[] = data.map((row: any) => {
           const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
           const det = row.details || {};
