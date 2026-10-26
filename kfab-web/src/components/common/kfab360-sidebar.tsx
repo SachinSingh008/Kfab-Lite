@@ -121,13 +121,23 @@ export function Kfab360Sidebar({
   // When openFolder is null, all folders are minimized
   const [openFolder, setOpenFolder] = useState<string | null>(null);
 
-  // Whenever the active tab changes to a child tab, automatically open its parent folder
+  // Whenever the active tab changes:
+  // If it's a child tab inside a folder -> open its parent folder
+  // If it's an Overview tab (dashboard, logs, chat) -> minimize all Workspace Operations!
   useEffect(() => {
     const parent = getFolderForTab(currentTab);
     if (parent) {
       setOpenFolder(parent);
+    } else {
+      setOpenFolder(null);
     }
   }, [currentTab]);
+
+  // Handler for clicking any Overview item (minimizes all Workspace Operations)
+  const handleSelectOverviewTab = (tab: NavTab) => {
+    setOpenFolder(null);
+    onSelectTab(tab);
+  };
 
   // Toggle folder accordion:
   // If clicking the currently open folder -> minimize it (null)
@@ -348,7 +358,7 @@ export function Kfab360Sidebar({
         {matchesSearch(getRoleDashboardLabel()) && (
           <ServiceNowRootItem
             active={currentTab === "dashboard"}
-            onClick={() => onSelectTab("dashboard")}
+            onClick={() => handleSelectOverviewTab("dashboard")}
             icon={LayoutDashboard}
             label={getRoleDashboardLabel()}
             isShrunk={isShrunk}
@@ -359,7 +369,7 @@ export function Kfab360Sidebar({
         {matchesSearch("Activity & Audit Logs") && (
           <ServiceNowRootItem
             active={currentTab === "logs"}
-            onClick={() => onSelectTab("logs")}
+            onClick={() => handleSelectOverviewTab("logs")}
             icon={FileText}
             label="Activity & Audit Logs"
             isShrunk={isShrunk}
@@ -370,7 +380,7 @@ export function Kfab360Sidebar({
         {matchesSearch("Team Channels & Chat") && (
           <ServiceNowRootItem
             active={currentTab === "chat"}
-            onClick={() => onSelectTab("chat")}
+            onClick={() => handleSelectOverviewTab("chat")}
             icon={MessageSquare}
             label="Team Channels & Chat"
             isShrunk={isShrunk}
