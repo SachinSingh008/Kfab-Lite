@@ -117,14 +117,11 @@ export function Kfab360Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ACCORDION STATE: ONLY ONE folder open at a time (remaining all minimized)
+  // ACCORDION STATE: All folders closed by default when web opens.
   // When openFolder is null, all folders are minimized
-  const [openFolder, setOpenFolder] = useState<string | null>(() => {
-    return getFolderForTab(currentTab) || "inventory";
-  });
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
 
-  // Whenever the active tab changes, automatically open its parent folder
-  // and minimize/close all other folders!
+  // Whenever the active tab changes to a child tab, automatically open its parent folder
   useEffect(() => {
     const parent = getFolderForTab(currentTab);
     if (parent) {
@@ -355,7 +352,6 @@ export function Kfab360Sidebar({
             icon={LayoutDashboard}
             label={getRoleDashboardLabel()}
             isShrunk={isShrunk}
-            count="24"
           />
         )}
 
@@ -367,7 +363,6 @@ export function Kfab360Sidebar({
             icon={FileText}
             label="Activity & Audit Logs"
             isShrunk={isShrunk}
-            count="7d"
           />
         )}
 
@@ -379,7 +374,6 @@ export function Kfab360Sidebar({
             icon={MessageSquare}
             label="Team Channels & Chat"
             isShrunk={isShrunk}
-            badge="LIVE"
           />
         )}
 
@@ -410,7 +404,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "inventory"}
             onToggle={() => handleToggleFolder("inventory")}
             icon={Boxes}
-            count={2}
             isShrunk={isShrunk}
             isActiveParent={["inventory", "stock"].includes(currentTab)}
           >
@@ -445,7 +438,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "reports"}
             onToggle={() => handleToggleFolder("reports")}
             icon={BarChart3}
-            count={4}
             isShrunk={isShrunk}
             isActiveParent={[
               "reports-progress",
@@ -504,7 +496,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "accounts"}
             onToggle={() => handleToggleFolder("accounts")}
             icon={Landmark}
-            count={3}
             isShrunk={isShrunk}
             isActiveParent={["accounts", "ledger", "supplies"].includes(currentTab)}
           >
@@ -548,7 +539,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "people"}
             onToggle={() => handleToggleFolder("people")}
             icon={Users}
-            count={2}
             isShrunk={isShrunk}
             isActiveParent={["employees", "attendance"].includes(currentTab)}
           >
@@ -583,7 +573,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "workbooks"}
             onToggle={() => handleToggleFolder("workbooks")}
             icon={FileSpreadsheet}
-            count={2}
             isShrunk={isShrunk}
             isActiveParent={["attendance", "inventory-workbook"].includes(currentTab)}
           >
@@ -618,7 +607,6 @@ export function Kfab360Sidebar({
             isOpen={isSearching ? true : openFolder === "security"}
             onToggle={() => handleToggleFolder("security")}
             icon={ShieldCheck}
-            count={2}
             isShrunk={isShrunk}
             isActiveParent={["users", "settings"].includes(currentTab)}
           >
@@ -716,7 +704,6 @@ interface ServiceNowModuleCategoryProps {
   isOpen: boolean;
   onToggle: () => void;
   icon: React.ComponentType<{ className?: string }>;
-  count?: number;
   isShrunk?: boolean;
   isActiveParent?: boolean;
   children?: React.ReactNode;
@@ -727,7 +714,6 @@ function ServiceNowModuleCategory({
   isOpen,
   onToggle,
   icon: Icon,
-  count,
   isShrunk = false,
   isActiveParent = false,
   children,
@@ -738,7 +724,7 @@ function ServiceNowModuleCategory({
 
   return (
     <div className="select-none mb-0.5">
-      {/* Category Header Row (Chevron + Icon + Title + Count) */}
+      {/* Category Header Row (Chevron + Icon + Title) */}
       <button
         type="button"
         onClick={onToggle}
@@ -759,12 +745,6 @@ function ServiceNowModuleCategory({
           <Icon className="size-4 shrink-0 text-slate-500 group-hover:text-slate-800 transition-colors" />
           <span className="truncate text-[13px]">{label}</span>
         </div>
-
-        {count !== undefined && (
-          <span className="text-[11px] font-medium text-slate-400 shrink-0">
-            {count}
-          </span>
-        )}
       </button>
 
       {/* Indented Module Items */}
@@ -788,7 +768,6 @@ interface ServiceNowModuleItemProps {
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  badge?: string;
   isShrunk?: boolean;
 }
 
@@ -797,7 +776,6 @@ function ServiceNowModuleItem({
   onClick,
   icon: Icon,
   label,
-  badge,
   isShrunk = false,
 }: ServiceNowModuleItemProps) {
   return (
@@ -820,18 +798,6 @@ function ServiceNowModuleItem({
         />
         {!isShrunk && <span className="truncate text-[12px]">{label}</span>}
       </div>
-
-      {!isShrunk && badge && (
-        <span
-          className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider shrink-0 ${
-            active
-              ? "bg-white/20 text-white"
-              : "bg-slate-100 text-slate-500 border border-slate-200"
-          }`}
-        >
-          {badge}
-        </span>
-      )}
     </button>
   );
 }
@@ -845,8 +811,6 @@ interface ServiceNowRootItemProps {
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  badge?: string;
-  count?: string | number;
   isShrunk?: boolean;
 }
 
@@ -855,8 +819,6 @@ function ServiceNowRootItem({
   onClick,
   icon: Icon,
   label,
-  badge,
-  count,
   isShrunk = false,
 }: ServiceNowRootItemProps) {
   return (
@@ -879,18 +841,6 @@ function ServiceNowRootItem({
         />
         {!isShrunk && <span className="truncate text-[13px]">{label}</span>}
       </div>
-
-      {!isShrunk && (badge || count !== undefined) && (
-        <span
-          className={`text-[11px] font-medium shrink-0 ${
-            active
-              ? "px-1.5 py-0.2 rounded-full bg-white/20 text-white font-bold text-[10px]"
-              : "text-slate-400"
-          }`}
-        >
-          {badge ?? count}
-        </span>
-      )}
     </button>
   );
 }
