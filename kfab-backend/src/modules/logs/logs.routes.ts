@@ -98,6 +98,15 @@ export async function logsRoutes(fastify: FastifyInstance) {
         });
       }
 
+      const userRole = request.user?.role;
+      if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
+        return reply.status(403).send({
+          statusCode: 403,
+          error: 'Forbidden',
+          message: 'Access to All Logs is restricted to Admin and Super Admin',
+        });
+      }
+
       try {
         const result = await logsService.getAllLogs(parsedQuery.data);
         return reply.send(result);

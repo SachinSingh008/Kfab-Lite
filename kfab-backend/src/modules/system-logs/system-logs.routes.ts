@@ -6,14 +6,14 @@ import { ListSystemLogsQuerySchema } from '../logs/logs.schema.js';
 export async function systemLogsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', authenticate);
 
-  // Authorization check hook: Only SUPER_ADMIN and ADMIN can access system logs
+  // Authorization check hook: Only SUPER_ADMIN can access system logs
   fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     const role = request.user?.role;
-    if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') {
+    if (role !== 'SUPER_ADMIN') {
       return reply.status(403).send({
         statusCode: 403,
         error: 'Forbidden',
-        message: 'Access restricted: Only SUPER_ADMIN and ADMIN can inspect system audit logs.',
+        message: 'Access restricted: Only SUPER_ADMIN can inspect system audit logs.',
       });
     }
   });
@@ -70,9 +70,10 @@ export async function systemLogsRoutes(fastify: FastifyInstance) {
       if (action) {
         query = query.eq('action', action);
       }
-      if (from) {
-        query = query.gte('created_at', from);
-      }
+      const sevenDaysCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const effectiveFrom = from && from > sevenDaysCutoff ? from : sevenDaysCutoff;
+      query = query.gte('created_at', effectiveFrom);
+
       if (to) {
         query = query.lte('created_at', to);
       }

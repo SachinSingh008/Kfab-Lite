@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { createClient } from './supabase/client';
+import { apiRecordAuditLog } from './api-client';
 
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'OD';
 
@@ -495,6 +496,22 @@ export async function markAttendance(input: MarkAttendanceInput): Promise<Attend
     overtimeHours: input.overtime_hours ?? 0,
     remarks: input.remarks ?? null,
   });
+
+  // Record audit log for tracking "who changed what at what time"
+  apiRecordAuditLog({
+    action: 'ATTENDANCE_MARKED',
+    description: `Attendance marked for emp ${input.employee_id}: ${input.status} (OT: ${input.overtime_hours ?? 0}h) on ${input.attendance_date}`,
+    metadata: {
+      module: 'ATTENDANCE',
+      resource_type: 'attendance',
+      resource_id: input.employee_id,
+      date: input.attendance_date,
+      status: input.status,
+      overtime: input.overtime_hours,
+      remarks: input.remarks,
+    },
+  }).catch(() => {});
+
   const res = await apiRequest<{ statusCode: number; record: AttendanceRecordDTO }>('/api/v1/attendance/mark', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -510,6 +527,18 @@ export async function bulkMarkAttendance(input: BulkAttendanceInput): Promise<Bu
       remarks: r.remarks ?? null,
     });
   });
+
+  apiRecordAuditLog({
+    action: 'ATTENDANCE_BULK_MARKED',
+    description: `Bulk attendance recorded for ${input.records.length} employees on ${input.attendance_date}`,
+    metadata: {
+      module: 'ATTENDANCE',
+      resource_type: 'attendance',
+      date: input.attendance_date,
+      total_records: input.records.length,
+    },
+  }).catch(() => {});
+
   return await apiRequest<BulkAttendanceResultDTO & { statusCode: number }>('/api/v1/attendance/bulk', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -520,6 +549,18 @@ export async function clearAttendance(input: ClearAttendanceInput): Promise<{ cl
   if (input.employee_ids) {
     input.employee_ids.forEach((id) => localCache.delete(`${id}_${input.attendance_date}`));
   }
+
+  apiRecordAuditLog({
+    action: 'ATTENDANCE_CLEARED',
+    description: `Attendance cleared for ${input.employee_ids?.length ?? 'all'} employees on ${input.attendance_date}`,
+    metadata: {
+      module: 'ATTENDANCE',
+      resource_type: 'attendance',
+      date: input.attendance_date,
+      employees: input.employee_ids,
+    },
+  }).catch(() => {});
+
   return await apiRequest<{ statusCode: number; clearedCount: number; message: string }>('/api/v1/attendance/clear', {
     method: 'POST',
     body: JSON.stringify(input),

@@ -32,7 +32,7 @@ import {
   UserLogDTO,
   SystemLogDTO,
 } from "@/lib/api-client";
-import { getVisibleLogRoles, canViewSystemLogs } from "@/lib/logs-visibility";
+import { getVisibleLogRoles, canViewAllLogs, canViewSystemLogs } from "@/lib/logs-visibility";
 
 interface LogsViewProps {
   currentUser: AppUser;
@@ -136,8 +136,21 @@ function ActionBadge({ action }: { action: string }) {
 }
 
 export function LogsView({ currentUser }: LogsViewProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("my");
+  const canSeeAllLogs = canViewAllLogs(currentUser.role);
   const canSeeSystemLogs = canViewSystemLogs(currentUser.role);
+  const [activeTab, setActiveTab] = useState<TabType>("my");
+
+  // Ensure active tab respects role access:
+  // All Logs -> Admin & Super Admin only
+  // System Logs -> Super Admin only
+  // My Logs -> Visible for all
+  useEffect(() => {
+    if (activeTab === "all" && !canSeeAllLogs) {
+      setActiveTab("my");
+    } else if (activeTab === "system" && !canSeeSystemLogs) {
+      setActiveTab("my");
+    }
+  }, [activeTab, canSeeAllLogs, canSeeSystemLogs]);
 
   // Notifications
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -347,46 +360,61 @@ export function LogsView({ currentUser }: LogsViewProps) {
                 LOGS
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                Comprehensive operational activity logs and automated system audit trails.
+                Operational activity logs and automated system audit trails.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Global tab buttons */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
-          <button
-            onClick={() => setActiveTab("my")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeTab === "my"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            My Logs
-          </button>
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeTab === "all"
-                ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            All Logs
-          </button>
-          {canSeeSystemLogs && (
+        {/* Global tab buttons & 7-day retention badge */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* 7-Day Retention Indicator */}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200 shadow-xs">
+            <Clock className="size-3.5 text-blue-600" />
+            <span>7-Day Retention Active</span>
+          </span>
+
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+            {/* My Logs: visible for all */}
             <button
-              onClick={() => setActiveTab("system")}
+              onClick={() => setActiveTab("my")}
               className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                activeTab === "system"
+                activeTab === "my"
                   ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              System Logs
+              My Logs
             </button>
-          )}
+
+            {/* All Logs: Admin and Super Admin only */}
+            {canSeeAllLogs && (
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  activeTab === "all"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                All Logs
+              </button>
+            )}
+
+            {/* System Logs: Super Admin only */}
+            {canSeeSystemLogs && (
+              <button
+                onClick={() => setActiveTab("system")}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  activeTab === "system"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                System Logs
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

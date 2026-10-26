@@ -679,14 +679,30 @@ export interface PaginatedLogsResponse<T> {
   totalPages: number;
 }
 
-// Local storage fallback cache for User Logs
+// Local storage fallback cache for User Logs (strictly capped to 7 days)
 const STORAGE_USER_LOGS_KEY = 'kfab_user_logs_v1';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getSevenDaysCutoffIso(): string {
+  return new Date(Date.now() - SEVEN_DAYS_MS).toISOString();
+}
 
 function getLocalLogs(): UserLogDTO[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_USER_LOGS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: UserLogDTO[] = JSON.parse(raw);
+    const cutoff = Date.now() - SEVEN_DAYS_MS;
+    // Strictly filter out any logs older than 7 days
+    const valid = parsed.filter((l) => {
+      const t = new Date(l.created_at).getTime();
+      return !isNaN(t) && t >= cutoff;
+    });
+    if (valid.length !== parsed.length) {
+      localStorage.setItem(STORAGE_USER_LOGS_KEY, JSON.stringify(valid));
+    }
+    return valid;
   } catch {
     return [];
   }
@@ -695,34 +711,92 @@ function getLocalLogs(): UserLogDTO[] {
 function saveLocalLogs(logs: UserLogDTO[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_USER_LOGS_KEY, JSON.stringify(logs));
+    const cutoff = Date.now() - SEVEN_DAYS_MS;
+    const valid = logs.filter((l) => {
+      const t = new Date(l.created_at).getTime();
+      return !isNaN(t) && t >= cutoff;
+    });
+    localStorage.setItem(STORAGE_USER_LOGS_KEY, JSON.stringify(valid));
   } catch (e) {
     console.error('Failed to save local logs', e);
   }
 }
 
-export async function apiCreateUserLog(data: { event: string; remarks?: string }): Promise<{ data: UserLogDTO }> {
+/**
+ * Record any general operational action / change / login into the authoritative audit trail
+ */
+export async function apiRecordAuditLog(params: {
+  action: string;
+  description: string;
+  module?: string;
+  resourceType?: string;
+  resourceId?: string;
+  oldValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('kfab_auth_session_v6') : null;
+  const user: AppUser | null = storedUser ? JSON.parse(storedUser) : null;
+  const nowIso = new Date().toISOString();
+  const logId = crypto.randomUUID();
+
+  const detailsPayload = {
+    module: params.module || 'System',
+    description: params.description,
+    event: params.description,
+    old_values: params.oldValues || null,
+    new_values: params.newValues || null,
+    resource_type: params.resourceType || null,
+    resource_id: params.resourceId || null,
+    user_name: user?.name || 'User',
+    user_role: user?.role || 'SUPER_ADMIN',
+    user_email: user?.username || '',
+    created_by: user?.id,
+    client: 'Web Application',
+    ...(params.metadata || {}),
+  };
+
+  // 1. Authoritative Supabase Insert
   try {
-    const res = await apiRequest<{ data: UserLogDTO }>('/api/v1/logs', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    if (res?.data) {
-      const existing = getLocalLogs();
-      saveLocalLogs([res.data, ...existing]);
-      return res;
+    const supabase = createClient();
+    if (supabase) {
+      await supabase.from('audit_logs').insert({
+        id: logId,
+        actor_id: user?.id && user.id.includes('-') ? user.id : null,
+        action: params.action,
+        status: 'SUCCESS',
+        details: detailsPayload,
+        created_at: nowIso,
+      });
     }
-  } catch (err) {
-    console.warn('Backend API log creation failed, using local store:', err);
+  } catch (e) {
+    console.warn('Failed direct Supabase audit log insert:', e);
   }
 
-  // Fallback local creation
+  // 2. Also save to local user logs store if action is a user activity or note
+  const newLog: UserLogDTO = {
+    id: logId,
+    created_by: user?.id || '00000000-0000-0000-0000-000000000001',
+    created_at: nowIso,
+    event: params.description,
+    remarks: `Action: ${params.action}`,
+    user_name: user?.name || 'User',
+    user_role: user?.role || 'SUPER_ADMIN',
+    user_email: user?.username || '',
+  };
+  saveLocalLogs([newLog, ...getLocalLogs()]);
+}
+
+export async function apiCreateUserLog(data: { event: string; remarks?: string }): Promise<{ data: UserLogDTO }> {
   const storedUser = typeof window !== 'undefined' ? localStorage.getItem('kfab_auth_session_v6') : null;
   const user = storedUser ? JSON.parse(storedUser) : null;
+  const nowIso = new Date().toISOString();
+  const logId = crypto.randomUUID();
+
   const newLog: UserLogDTO = {
-    id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id: logId,
     created_by: user?.id || '00000000-0000-0000-0000-000000000001',
-    created_at: new Date().toISOString(),
+    created_at: nowIso,
     event: data.event.trim(),
     remarks: data.remarks?.trim() || null,
     user_name: user?.name || 'User',
@@ -730,6 +804,44 @@ export async function apiCreateUserLog(data: { event: string; remarks?: string }
     user_email: user?.username || '',
   };
 
+  // 1. Authoritative direct Supabase insert into audit_logs
+  try {
+    const supabase = createClient();
+    if (supabase) {
+      await supabase.from('audit_logs').insert({
+        id: logId,
+        actor_id: user?.id && user.id.includes('-') ? user.id : null,
+        action: 'USER_LOG',
+        status: 'SUCCESS',
+        details: {
+          event: data.event.trim(),
+          remarks: data.remarks?.trim() || null,
+          description: data.event.trim(),
+          module: 'User Activity',
+          user_name: user?.name || 'User',
+          user_role: user?.role || 'SUPERVISOR',
+          user_email: user?.username || '',
+          created_by: user?.id,
+          client: 'Web Application',
+        },
+        created_at: nowIso,
+      });
+    }
+  } catch (err) {
+    console.warn('Direct Supabase insert into audit_logs failed:', err);
+  }
+
+  // 2. Also notify Fastify Backend if available
+  try {
+    await apiRequest<{ data: UserLogDTO }>('/api/v1/logs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  } catch {
+    // Non-blocking
+  }
+
+  // 3. Local storage update
   const existing = getLocalLogs();
   saveLocalLogs([newLog, ...existing]);
   return { data: newLog };
@@ -744,26 +856,87 @@ export async function apiGetMyLogs(params?: {
 }): Promise<PaginatedLogsResponse<UserLogDTO>> {
   const page = params?.page || 1;
   const limit = params?.limit || 25;
+  const sevenDaysCutoff = getSevenDaysCutoffIso();
+  const effectiveFrom = params?.from && params.from > sevenDaysCutoff ? params.from : sevenDaysCutoff;
 
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('kfab_auth_session_v6') : null;
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
+  const currentUserId = currentUser?.id;
+
+  // 1. Direct Supabase Query on audit_logs
+  try {
+    const supabase = createClient();
+    if (supabase && currentUserId) {
+      let query = supabase
+        .from('audit_logs')
+        .select('id, actor_id, action, details, created_at, profiles:actor_id(full_name, role, email)', { count: 'exact' })
+        .gte('created_at', effectiveFrom);
+
+      if (params?.to) {
+        query = query.lte('created_at', params.to);
+      }
+
+      // Filter by current user
+      query = query.or(`actor_id.eq.${currentUserId},details->>created_by.eq.${currentUserId}`);
+
+      const offset = (page - 1) * limit;
+      query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+
+      const { data, count, error } = await query;
+
+      if (!error && data && data.length > 0) {
+        let logs: UserLogDTO[] = data.map((row: any) => {
+          const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          const det = row.details || {};
+          return {
+            id: row.id,
+            created_by: row.actor_id || det.created_by || currentUserId,
+            created_at: row.created_at,
+            event: det.event || det.description || row.action,
+            remarks: det.remarks || (row.action !== 'USER_LOG' ? `Action: ${row.action}` : null),
+            user_name: prof?.full_name || det.user_name || currentUser?.name || 'User',
+            user_role: prof?.role || det.user_role || currentUser?.role || 'SUPERVISOR',
+            user_email: prof?.email || det.user_email || currentUser?.username || '',
+          };
+        });
+
+        if (params?.search) {
+          const q = params.search.toLowerCase();
+          logs = logs.filter((l) => l.event.toLowerCase().includes(q) || (l.remarks || '').toLowerCase().includes(q));
+        }
+
+        const total = count ?? logs.length;
+        return {
+          logs,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Supabase My Logs query error:', err);
+  }
+
+  // 2. Fallback to Fastify Backend API
   try {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
+    query.append('page', String(page));
+    query.append('limit', String(limit));
+    query.append('from', effectiveFrom);
     if (params?.search) query.append('search', params.search);
-    if (params?.from) query.append('from', params.from);
     if (params?.to) query.append('to', params.to);
     const qStr = query.toString();
-    const res = await apiRequest<PaginatedLogsResponse<UserLogDTO>>(`/api/v1/logs/my${qStr ? `?${qStr}` : ''}`);
+    const res = await apiRequest<PaginatedLogsResponse<UserLogDTO>>(`/api/v1/logs/my?${qStr}`);
     if (res && Array.isArray(res.logs)) {
       return res;
     }
   } catch (err) {
-    console.warn('Fastify API /api/v1/logs/my returned error, falling back to local storage:', err);
+    console.warn('Fastify API /api/v1/logs/my returned error, using local fallback:', err);
   }
 
-  // Local fallback
-  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('kfab_auth_session_v6') : null;
-  const currentUserId = storedUser ? JSON.parse(storedUser)?.id : null;
+  // 3. Fallback to local storage (strictly filtered to last 7 days)
   let all = getLocalLogs().filter((l) => !currentUserId || l.created_by === currentUserId);
   if (params?.search) {
     const q = params.search.toLowerCase();
@@ -790,25 +963,91 @@ export async function apiGetAllLogs(params?: {
 }): Promise<PaginatedLogsResponse<UserLogDTO>> {
   const page = params?.page || 1;
   const limit = params?.limit || 25;
+  const sevenDaysCutoff = getSevenDaysCutoffIso();
+  const effectiveFrom = params?.from && params.from > sevenDaysCutoff ? params.from : sevenDaysCutoff;
 
+  // 1. Direct Supabase Query on audit_logs
+  try {
+    const supabase = createClient();
+    if (supabase) {
+      let query = supabase
+        .from('audit_logs')
+        .select('id, actor_id, action, details, created_at, profiles:actor_id(full_name, role, email)', { count: 'exact' })
+        .gte('created_at', effectiveFrom);
+
+      if (params?.to) {
+        query = query.lte('created_at', params.to);
+      }
+
+      const offset = (page - 1) * limit;
+      query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+
+      const { data, count, error } = await query;
+
+      if (!error && data && data.length > 0) {
+        let logs: UserLogDTO[] = data.map((row: any) => {
+          const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          const det = row.details || {};
+          return {
+            id: row.id,
+            created_by: row.actor_id || det.created_by || '',
+            created_at: row.created_at,
+            event: det.event || det.description || row.action,
+            remarks: det.remarks || (row.action !== 'USER_LOG' ? `Action: ${row.action}` : null),
+            user_name: prof?.full_name || det.user_name || 'System / User',
+            user_role: prof?.role || det.user_role || 'SUPERVISOR',
+            user_email: prof?.email || det.user_email || '',
+          };
+        });
+
+        if (params?.search) {
+          const q = params.search.toLowerCase();
+          logs = logs.filter(
+            (l) =>
+              l.event.toLowerCase().includes(q) ||
+              (l.remarks || '').toLowerCase().includes(q) ||
+              (l.user_name || '').toLowerCase().includes(q)
+          );
+        }
+
+        if (params?.role && params.role !== 'ALL') {
+          logs = logs.filter((l) => l.user_role?.toUpperCase() === params.role?.toUpperCase());
+        }
+
+        const total = count ?? logs.length;
+        return {
+          logs,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Supabase All Logs query error:', err);
+  }
+
+  // 2. Fallback to Fastify Backend API
   try {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
+    query.append('page', String(page));
+    query.append('limit', String(limit));
+    query.append('from', effectiveFrom);
     if (params?.search) query.append('search', params.search);
     if (params?.role) query.append('role', params.role);
     if (params?.user) query.append('user', params.user);
-    if (params?.from) query.append('from', params.from);
     if (params?.to) query.append('to', params.to);
     const qStr = query.toString();
-    const res = await apiRequest<PaginatedLogsResponse<UserLogDTO>>(`/api/v1/logs/all${qStr ? `?${qStr}` : ''}`);
+    const res = await apiRequest<PaginatedLogsResponse<UserLogDTO>>(`/api/v1/logs/all?${qStr}`);
     if (res && Array.isArray(res.logs)) {
       return res;
     }
   } catch (err) {
-    console.warn('Fastify API /api/v1/logs/all returned error, falling back to local storage:', err);
+    console.warn('Fastify API /api/v1/logs/all returned error, using local fallback:', err);
   }
 
+  // 3. Fallback to local storage (strictly filtered to last 7 days)
   let all = getLocalLogs();
   if (params?.search) {
     const q = params.search.toLowerCase();
@@ -820,7 +1059,7 @@ export async function apiGetAllLogs(params?: {
     );
   }
   if (params?.role && params.role !== 'ALL') {
-    all = all.filter((l) => l.user_role === params.role);
+    all = all.filter((l) => l.user_role?.toUpperCase() === params.role?.toUpperCase());
   }
   const offset = (page - 1) * limit;
   return {
@@ -844,19 +1083,102 @@ export async function apiGetSystemLogs(params?: {
 }): Promise<PaginatedLogsResponse<SystemLogDTO>> {
   const page = params?.page || 1;
   const limit = params?.limit || 25;
+  const sevenDaysCutoff = getSevenDaysCutoffIso();
+  const effectiveFrom = params?.from && params.from > sevenDaysCutoff ? params.from : sevenDaysCutoff;
 
+  // 1. Direct Supabase Query on audit_logs
+  try {
+    const supabase = createClient();
+    if (supabase) {
+      let query = supabase
+        .from('audit_logs')
+        .select(
+          `
+          id,
+          created_at,
+          actor_id,
+          action,
+          details,
+          ip_address,
+          user_agent,
+          correlation_id,
+          status,
+          profiles:actor_id (
+            full_name,
+            role,
+            email
+          )
+        `,
+          { count: 'exact' }
+        )
+        .gte('created_at', effectiveFrom);
+
+      if (params?.to) {
+        query = query.lte('created_at', params.to);
+      }
+      if (params?.action && params.action !== 'ALL') {
+        query = query.eq('action', params.action);
+      }
+
+      const offset = (page - 1) * limit;
+      query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+
+      const { data, count, error } = await query;
+
+      if (!error && data && data.length > 0) {
+        const logs: SystemLogDTO[] = data.map((row: any) => {
+          const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          const det = row.details || {};
+          return {
+            id: row.id,
+            created_at: row.created_at,
+            actor_id: row.actor_id,
+            action: row.action,
+            module: det.module || 'SYSTEM',
+            resource_type: det.resource_type || null,
+            resource_id: det.resource_id || null,
+            description: det.description || det.event || row.action,
+            old_values: det.old_values || null,
+            new_values: det.new_values || null,
+            target_user_id: row.target_user_id || null,
+            details: det,
+            ip_address: row.ip_address || null,
+            user_agent: row.user_agent || null,
+            correlation_id: row.correlation_id || null,
+            status: row.status || 'SUCCESS',
+            actor_name: prof?.full_name || det.user_name || 'System / Automated',
+            actor_role: prof?.role || det.user_role || 'SYSTEM',
+            actor_email: prof?.email || det.user_email || '',
+          };
+        });
+
+        const total = count ?? logs.length;
+        return {
+          logs,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Supabase System Logs query error:', err);
+  }
+
+  // 2. Fallback to Fastify Backend API
   try {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
+    query.append('page', String(page));
+    query.append('limit', String(limit));
+    query.append('from', effectiveFrom);
     if (params?.search) query.append('search', params.search);
     if (params?.module) query.append('module', params.module);
     if (params?.action) query.append('action', params.action);
     if (params?.user) query.append('user', params.user);
-    if (params?.from) query.append('from', params.from);
     if (params?.to) query.append('to', params.to);
     const qStr = query.toString();
-    const res = await apiRequest<PaginatedLogsResponse<SystemLogDTO>>(`/api/v1/system-logs${qStr ? `?${qStr}` : ''}`);
+    const res = await apiRequest<PaginatedLogsResponse<SystemLogDTO>>(`/api/v1/system-logs?${qStr}`);
     if (res && Array.isArray(res.logs)) {
       return res;
     }

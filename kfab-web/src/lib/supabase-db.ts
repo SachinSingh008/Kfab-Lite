@@ -302,6 +302,23 @@ export async function addStockInward(payload: {
     .select()
     .single();
   if (error) throw error;
+
+  // Record audit log for stock change
+  client.from('audit_logs').insert({
+    actor_id: payload.created_by && payload.created_by.includes('-') ? payload.created_by : null,
+    action: 'STOCK_INWARD_CREATED',
+    status: 'SUCCESS',
+    details: {
+      module: 'STOCK',
+      description: `Stock inward: ${payload.quantity} ${payload.unit_code} (Challan: ${payload.challan_number || 'N/A'})`,
+      event: `Stock Inward: ${payload.quantity} ${payload.unit_code}`,
+      remarks: payload.remarks || `Vehicle: ${payload.vehicle_number || 'N/A'}`,
+      created_by: payload.created_by,
+      client: 'Web App',
+    },
+    created_at: new Date().toISOString(),
+  }).then(() => {}, () => {});
+
   return data as DbStockInward;
 }
 
@@ -325,6 +342,22 @@ export async function addStockOutward(payload: {
     .select()
     .single();
   if (error) throw error;
+
+  client.from('audit_logs').insert({
+    actor_id: payload.created_by && payload.created_by.includes('-') ? payload.created_by : null,
+    action: 'STOCK_OUTWARD_CREATED',
+    status: 'SUCCESS',
+    details: {
+      module: 'STOCK',
+      description: `Stock outward: ${payload.quantity} ${payload.unit_code} to ${payload.destination}`,
+      event: `Stock Outward: ${payload.quantity} ${payload.unit_code}`,
+      remarks: payload.remarks || `Destination: ${payload.destination}`,
+      created_by: payload.created_by,
+      client: 'Web App',
+    },
+    created_at: new Date().toISOString(),
+  }).then(() => {}, () => {});
+
   return data as DbStockOutward;
 }
 
@@ -347,6 +380,22 @@ export async function addStockUsage(payload: {
     .select()
     .single();
   if (error) throw error;
+
+  client.from('audit_logs').insert({
+    actor_id: payload.created_by && payload.created_by.includes('-') ? payload.created_by : null,
+    action: 'STOCK_USAGE_RECORDED',
+    status: 'SUCCESS',
+    details: {
+      module: 'STOCK',
+      description: `Stock usage: ${payload.quantity} ${payload.unit_code} on ${payload.project_name || 'shop-floor'}`,
+      event: `Stock Usage: ${payload.quantity} ${payload.unit_code}`,
+      remarks: payload.remarks || `Used by: ${payload.used_by || 'Crew'}`,
+      created_by: payload.created_by,
+      client: 'Web App',
+    },
+    created_at: new Date().toISOString(),
+  }).then(() => {}, () => {});
+
   return data as DbStockUsage;
 }
 
@@ -361,6 +410,19 @@ export async function voidStockTransaction(
     .update({ status: 'VOIDED', void_reason: voidReason })
     .eq('id', id);
   if (error) throw error;
+
+  client.from('audit_logs').insert({
+    action: 'STOCK_VOIDED',
+    status: 'SUCCESS',
+    details: {
+      module: 'STOCK',
+      description: `Voided stock item from ${table}: ID ${id}. Reason: ${voidReason}`,
+      event: `Voided Stock: ${id}`,
+      remarks: `Reason: ${voidReason}`,
+      client: 'Web App',
+    },
+    created_at: new Date().toISOString(),
+  }).then(() => {}, () => {});
 }
 
 export async function getStockTransactions(companyId: string, limit = 50): Promise<(DbStockInward | DbStockOutward | DbStockUsage)[]> {

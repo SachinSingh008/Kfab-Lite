@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AppUser, authenticateUser, getStoredUsers } from "@/lib/auth-store";
+import { apiRecordAuditLog } from "@/lib/api-client";
 
 interface LoginViewProps {
   onLoginSuccess: (user: AppUser) => void;
@@ -71,6 +72,21 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
 
     try {
       const user = await authenticateUser(username, password);
+      // Record login event in authoritative audit trail (who login when)
+      apiRecordAuditLog({
+        action: "USER_LOGIN",
+        description: `User "${user.name}" (${user.role}) signed in to Web Application`,
+        module: "Authentication",
+        metadata: {
+          user_id: user.id,
+          user_name: user.name,
+          user_role: user.role,
+          user_email: user.username,
+          client: "Web Application",
+          login_time: new Date().toISOString(),
+        },
+      }).catch((err) => console.warn("Failed to record login audit log:", err));
+
       setIsLoading(false);
       onLoginSuccess(user);
     } catch (err: unknown) {

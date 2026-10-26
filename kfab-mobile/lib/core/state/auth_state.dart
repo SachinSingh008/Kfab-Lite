@@ -241,6 +241,27 @@ class AuthState extends ChangeNotifier {
             // non-blocking
           }
 
+          // Record login log into audit_logs (who login when)
+          try {
+            await client.from('audit_logs').insert({
+              'actor_id': res.user!.id,
+              'action': 'USER_LOGIN',
+              'status': 'SUCCESS',
+              'details': {
+                'description': 'User "$_userName" (${_role.displayName}) signed in to Mobile App',
+                'module': 'Authentication',
+                'client': 'Mobile App',
+                'user_name': _userName,
+                'user_role': _role.displayName,
+                'user_email': _userEmail,
+                'login_time': nowIso,
+              },
+              'created_at': nowIso,
+            });
+          } catch (e) {
+            debugPrint('[Audit] Could not record mobile login log: $e');
+          }
+
           _isAuthenticated = true;
           _isConnectedToSupabase = true;
           notifyListeners();

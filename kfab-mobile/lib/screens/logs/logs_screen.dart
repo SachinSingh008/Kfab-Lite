@@ -16,7 +16,9 @@ class LogsScreen extends StatefulWidget {
 
 class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _canSeeSystemLogs = false;
+  bool get _canSeeAllLogs =>
+      widget.authState.role == UserRole.superAdmin || widget.authState.role == UserRole.admin;
+  bool get _canSeeSystemLogs => widget.authState.role == UserRole.superAdmin;
 
   // Tab 1: My Logs state
   List<UserLogItem> _myLogs = [];
@@ -38,15 +40,19 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    final role = widget.authState.role;
-    _canSeeSystemLogs = role == UserRole.superAdmin || role == UserRole.admin;
+    int tabCount = 1;
+    if (_canSeeAllLogs) tabCount++;
+    if (_canSeeSystemLogs) tabCount++;
+
     _tabController = TabController(
-      length: _canSeeSystemLogs ? 3 : 2,
+      length: tabCount,
       vsync: this,
     );
 
     _fetchMyLogs();
-    _fetchAllLogs();
+    if (_canSeeAllLogs) {
+      _fetchAllLogs();
+    }
     if (_canSeeSystemLogs) {
       _fetchSystemLogs();
     }
@@ -80,8 +86,12 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
   }
 
   // --------------------------------------------------------------------------
-  // Data Fetching
+  // Data Fetching (Strict 7-Day Retention Window)
   // --------------------------------------------------------------------------
+  String get _sevenDaysAgoCutoff {
+    return DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+  }
+
   Future<void> _fetchMyLogs() async {
     setState(() => _loadingMyLogs = true);
     try {
@@ -90,11 +100,12 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
         final user = client.auth.currentUser;
         if (user != null) {
           final res = await client
-              .from('user_logs')
-              .select('id, created_by, created_at, event, remarks, profiles(full_name, role)')
-              .eq('created_by', user.id)
+              .from('audit_logs')
+              .select('id, actor_id, action, details, created_at, profiles:actor_id(full_name, role)')
+              .or('actor_id.eq.${user.id},details->>created_by.eq.${user.id}')
+              .gte('created_at', _sevenDaysAgoCutoff)
               .order('created_at', ascending: false)
-              .limit(50);
+              .limit(100);
 
           if (mounted) {
             setState(() {
@@ -111,15 +122,17 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _fetchAllLogs() async {
+    if (!_canSeeAllLogs) return;
     setState(() => _loadingAllLogs = true);
     try {
       final client = SupabaseConfig.client;
       if (client != null) {
         final res = await client
-            .from('user_logs')
-            .select('id, created_by, created_at, event, remarks, profiles(full_name, role)')
+            .from('audit_logs')
+            .select('id, actor_id, action, details, created_at, profiles:actor_id(full_name, role)')
+            .gte('created_at', _sevenDaysAgoCutoff)
             .order('created_at', ascending: false)
-            .limit(100);
+            .limit(150);
 
         if (mounted) {
           setState(() {
@@ -142,9 +155,10 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
       if (client != null) {
         final res = await client
             .from('audit_logs')
-            .select('id, created_at, actor_id, action, module, resource_type, resource_id, description, old_values, new_values, ip_address, user_agent, correlation_id, profiles(full_name, role)')
+            .select('id, created_at, actor_id, action, details, ip_address, user_agent, correlation_id, profiles:actor_id(full_name, role)')
+            .gte('created_at', _sevenDaysAgoCutoff)
             .order('created_at', ascending: false)
-            .limit(100);
+            .limit(150);
 
         if (mounted) {
           setState(() {
@@ -294,10 +308,21 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
                             if (client != null) {
                               final user = client.auth.currentUser;
                               if (user != null) {
-                                await client.from('user_logs').insert({
-                                  'created_by': user.id,
-                                  'event': event,
-                                  'remarks': remarksCtrl.text.trim().isEmpty ? null : remarksCtrl.text.trim(),
+                                await client.from('audit_logs').insert({
+                                  'actor_id': user.id,
+                                  'action': 'USER_LOG',
+                                  'status': 'SUCCESS',
+                                  'details': {
+                                    'event': event,
+                                    'remarks': remarksCtrl.text.trim().isEmpty ? null : remarksCtrl.text.trim(),
+                                    'description': event,
+                                    'module': 'User Activity',
+                                    'user_name': widget.authState.userName,
+                                    'user_role': widget.authState.role.displayName,
+                                    'created_by': user.id,
+                                    'client': 'Mobile App',
+                                  },
+                                  'created_at': DateTime.now().toUtc().toIso8601String(),
                                 });
                               }
                             }
@@ -309,7 +334,8 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
                               ),
                             );
                             _fetchMyLogs();
-                            _fetchAllLogs();
+                            if (_canSeeAllLogs) _fetchAllLogs();
+                            if (_canSeeSystemLogs) _fetchSystemLogs();
                           } catch (err) {
                             messenger.showSnackBar(
                               SnackBar(content: Text('Error: $err'), backgroundColor: Colors.red),
@@ -580,6 +606,30 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
       ),
     );
   }
+  Widget _buildRetentionBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFF6FF),
+        border: Border(bottom: BorderSide(color: Color(0xFFBFDBFE), width: 1)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history_toggle_off, size: 14, color: Color(0xFF1D4ED8)),
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              '7-Day Retention Active: Storing & displaying logs of the last 7 days only',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -596,7 +646,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
             icon: const Icon(Icons.refresh),
             onPressed: () {
               _fetchMyLogs();
-              _fetchAllLogs();
+              if (_canSeeAllLogs) _fetchAllLogs();
               if (_canSeeSystemLogs) _fetchSystemLogs();
             },
             tooltip: 'Refresh Logs',
@@ -610,7 +660,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
           indicatorWeight: 3,
           tabs: [
             const Tab(text: 'My Logs'),
-            const Tab(text: 'All Logs'),
+            if (_canSeeAllLogs) const Tab(text: 'All Logs'),
             if (_canSeeSystemLogs) const Tab(text: 'System Logs'),
           ],
         ),
@@ -626,7 +676,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
         controller: _tabController,
         children: [
           _buildMyLogsTab(),
-          _buildAllLogsTab(),
+          if (_canSeeAllLogs) _buildAllLogsTab(),
           if (_canSeeSystemLogs) _buildSystemLogsTab(),
         ],
       ),
@@ -645,6 +695,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
 
     return Column(
       children: [
+        _buildRetentionBanner(),
         // Search bar
         Padding(
           padding: const EdgeInsets.all(12),
@@ -769,6 +820,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
 
     return Column(
       children: [
+        _buildRetentionBanner(),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -881,7 +933,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
   }
 
   // --------------------------------------------------------------------------
-  // Tab 3: System Logs UI (Super Admin & Admin only)
+  // Tab 3: System Logs UI (Super Admin only)
   // --------------------------------------------------------------------------
   Widget _buildSystemLogsTab() {
     final filtered = _systemLogs.where((item) {
@@ -898,6 +950,7 @@ class _LogsScreenState extends State<LogsScreen> with SingleTickerProviderStateM
 
     return Column(
       children: [
+        _buildRetentionBanner(),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

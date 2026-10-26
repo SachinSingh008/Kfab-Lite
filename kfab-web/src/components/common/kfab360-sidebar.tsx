@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -17,9 +15,6 @@ import {
   Building2,
   Layers,
   ChevronRight,
-  ChevronDown,
-  Folder,
-  FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
   Activity,
@@ -29,9 +24,9 @@ import {
   FileText,
   BarChart3,
   HardHat,
-  FileCode2,
+  Search,
+  X,
   Minus,
-  Plus,
 } from "lucide-react";
 import { AppUser } from "@/lib/auth-store";
 
@@ -66,6 +61,36 @@ interface Kfab360SidebarProps {
   onLogout: () => void;
 }
 
+// Maps any tab to its parent category folder key
+function getFolderForTab(tab: NavTab): string | null {
+  switch (tab) {
+    case "inventory":
+    case "stock":
+      return "inventory";
+    case "reports":
+    case "reports-progress":
+    case "reports-details":
+    case "daily-reports":
+    case "production":
+      return "reports";
+    case "accounts":
+    case "ledger":
+    case "supplies":
+      return "accounts";
+    case "employees":
+      return "people";
+    case "inventory-workbook":
+      return "workbooks";
+    case "attendance":
+      return "people";
+    case "users":
+    case "settings":
+      return "security";
+    default:
+      return null;
+  }
+}
+
 export function Kfab360Sidebar({
   currentTab,
   onSelectTab,
@@ -77,65 +102,63 @@ export function Kfab360Sidebar({
   const isSupervisor = currentUser.role === "SUPERVISOR";
   const isAccountant = currentUser.role === "ACCOUNTANT" || currentUser.role === "ACCOUNT";
 
-  // Role visibility permissions:
-  // - Dashboard: user role specific (all)
-  // - Logs: as it is (all)
-  // - Inventory: for all
+  // Role visibility permissions
   const canSeeInventory = true;
-  // - Reports: for supervisor admin and superadmin
   const canSeeReports = isSupervisor || isAdmin || isSuperAdmin;
-  // - Accounts: for acc admin and superadmin
   const canSeeAccounts = isAccountant || isAdmin || isSuperAdmin;
-  // - People and hr: for acc admin and superadmin
   const canSeePeople = isAccountant || isAdmin || isSuperAdmin;
-  // - Workbook: visible for acc admin and superadmin
   const canSeeWorkbooks = isAccountant || isAdmin || isSuperAdmin;
-  // - Admin and security: visible for admin and superadmin
   const canSeeSecurity = isAdmin || isSuperAdmin;
 
   // Shrinkable/collapsible full sidebar state
   const [isShrunk, setIsShrunk] = useState(false);
 
-  // Antigravity Explorer Collapsible Folders State (only for categories with multiple children)
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
-    inventory: true,
-    reports: true,
-    accounts: true,
-    people: true,
-    workbooks: true,
-    security: true,
+  // ServiceNow Filter Navigator search query
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ACCORDION STATE: ONLY ONE folder open at a time (remaining all minimized)
+  // When openFolder is null, all folders are minimized
+  const [openFolder, setOpenFolder] = useState<string | null>(() => {
+    return getFolderForTab(currentTab) || "inventory";
   });
 
-  const toggleFolder = (folderKey: string) => {
-    setOpenFolders((prev) => ({
-      ...prev,
-      [folderKey]: !prev[folderKey],
-    }));
+  // Whenever the active tab changes, automatically open its parent folder
+  // and minimize/close all other folders!
+  useEffect(() => {
+    const parent = getFolderForTab(currentTab);
+    if (parent) {
+      setOpenFolder(parent);
+    }
+  }, [currentTab]);
+
+  // Toggle folder accordion:
+  // If clicking the currently open folder -> minimize it (null)
+  // If clicking another folder -> open that folder and minimize all others!
+  const handleToggleFolder = (folderKey: string) => {
+    setOpenFolder((prev) => (prev === folderKey ? null : folderKey));
   };
 
-  const collapseAllFolders = () => {
-    setOpenFolders({
-      inventory: false,
-      reports: false,
-      accounts: false,
-      people: false,
-      workbooks: false,
-      security: false,
-    });
+  const handleMinimizeAll = () => {
+    setOpenFolder(null);
   };
 
-  const expandAllFolders = () => {
-    setOpenFolders({
-      inventory: true,
-      reports: true,
-      accounts: true,
-      people: true,
-      workbooks: true,
-      security: true,
-    });
-  };
-
-  const areAnyOpen = Object.values(openFolders).some(Boolean);
+  // Keyboard shortcut '/' to quickly focus the ServiceNow Filter Navigator
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA" &&
+        !isShrunk
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isShrunk]);
 
   // Ensure current user cannot stay stuck on an unauthorized tab
   useEffect(() => {
@@ -167,10 +190,18 @@ export function Kfab360Sidebar({
     return "Operations Overview";
   };
 
+  // Search filter helper to check if text matches
+  const matchesSearch = (text: string) => {
+    if (!searchQuery.trim()) return true;
+    return text.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  };
+
+  const isSearching = searchQuery.trim().length > 0;
+
   return (
     <aside
       className={`flex-shrink-0 flex flex-col border-r shadow-kfab z-20 select-none transition-all duration-300 ease-in-out ${
-        isShrunk ? "w-[72px]" : "w-72"
+        isShrunk ? "w-[72px]" : "w-[280px]"
       }`}
       style={{
         backgroundColor: "var(--role-sidebar-bg)",
@@ -178,48 +209,52 @@ export function Kfab360Sidebar({
         borderColor: "var(--role-sidebar-border)",
       }}
     >
-      {/* 1. Brand & Plant Header */}
+      {/* ============================================================ */}
+      {/* 1. SERVICENOW STYLE APPLICATION HEADER */}
+      {/* ============================================================ */}
       <div
-        className="p-3.5 border-b"
+        className="p-3 border-b flex flex-col gap-2.5"
         style={{ borderColor: "var(--role-sidebar-border)" }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
+            {/* Brand Logo with Elevation Badge */}
             <div
-              className="shrink-0 size-9 rounded-full bg-white flex items-center justify-center p-1 shadow-xs border"
+              className="shrink-0 size-9 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-xs border transition-transform duration-200 hover:scale-105"
               style={{ borderColor: "var(--role-sidebar-border)" }}
             >
               <Image
                 src="/logo.png"
                 alt="KFAB360 Logo"
-                width={32}
-                height={32}
+                width={28}
+                height={28}
                 className="object-contain"
                 priority
               />
             </div>
+
             {!isShrunk && (
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h1
-                    className="text-[16px] font-black tracking-tight"
+                    className="text-[15px] font-black tracking-tight"
                     style={{ color: "var(--role-sidebar-fg)" }}
                   >
                     KFAB<span style={{ color: "var(--role-accent)" }}>360</span>
                   </h1>
                   <span
-                    className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider border"
+                    className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full tracking-wider border"
                     style={{
                       backgroundColor: "var(--role-badge-bg)",
                       color: "var(--role-badge-text)",
                       borderColor: "var(--role-border)",
                     }}
                   >
-                    {isSuperAdmin ? "PRO" : currentUser.role.replace("_", " ")}
+                    {isSuperAdmin ? "ENTERPRISE" : currentUser.role.replace("_", " ")}
                   </span>
                 </div>
                 <p
-                  className="text-[10px] font-semibold truncate opacity-85"
+                  className="text-[10.5px] font-medium truncate opacity-75 leading-tight"
                   style={{ color: "var(--role-sidebar-section-title)" }}
                 >
                   Heavy Steel Fabrication ERP
@@ -228,11 +263,11 @@ export function Kfab360Sidebar({
             )}
           </div>
 
-          {/* Toggle Sidebar Shrink Button */}
+          {/* Toggle Sidebar Shrink/Expand Button */}
           <button
             onClick={() => setIsShrunk(!isShrunk)}
-            title={isShrunk ? "Expand Sidebar" : "Shrink Sidebar"}
-            className="p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 opacity-70 hover:opacity-100"
+            title={isShrunk ? "Expand Navigation" : "Collapse Navigation"}
+            className="p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 opacity-70 hover:opacity-100 hover:bg-[var(--role-sidebar-item-hover-bg)]"
             style={{ color: "var(--role-sidebar-fg)" }}
           >
             {isShrunk ? (
@@ -243,10 +278,10 @@ export function Kfab360Sidebar({
           </button>
         </div>
 
-        {/* Plant Facility Badge (hidden when shrunk) */}
+        {/* Plant Facility Status Pill (Hidden when Shrunk) */}
         {!isShrunk && (
           <div
-            className="mt-3 px-2.5 py-1.5 rounded-lg border flex items-center justify-between text-[11px]"
+            className="px-2.5 py-1.5 rounded-lg border flex items-center justify-between text-[11px] shadow-2xs"
             style={{
               backgroundColor: "var(--role-sidebar-subtle)",
               borderColor: "var(--role-sidebar-border)",
@@ -257,280 +292,373 @@ export function Kfab360Sidebar({
               <Building2 className="size-3.5 opacity-70 shrink-0" />
               <span className="truncate">Jejuri Plant • MIDC Pune</span>
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0]">
-              ONLINE
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#DCFCE7] text-[#15803D] border border-[#BBF7D0]">
+              <span className="size-1.5 rounded-full bg-[#16A34A] animate-pulse" />
+              LIVE
             </span>
           </div>
         )}
       </div>
 
-      {/* Explorer Section Title (Antigravity IDE style) with Collapse All Minus Option */}
+      {/* ============================================================ */}
+      {/* 2. SERVICENOW FILTER NAVIGATOR (Search Input) */}
+      {/* ============================================================ */}
       {!isShrunk && (
         <div
-          className="px-3.5 py-2 border-b flex items-center justify-between text-[10px] font-extrabold uppercase tracking-widest"
-          style={{
-            borderColor: "var(--role-sidebar-border)",
-            color: "var(--role-sidebar-section-title)",
-          }}
+          className="px-2.5 pt-2.5 pb-2 border-b"
+          style={{ borderColor: "var(--role-sidebar-border)" }}
         >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <FileCode2 className="size-3.5 opacity-80" />
-            <span className="truncate">Workspace Explorer</span>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Minus Option to Minimize All Files/Folders */}
-            <button
-              type="button"
-              onClick={collapseAllFolders}
-              title="Minimize All Folders & Files (Collapse All)"
-              className="p-1 rounded hover:bg-[var(--role-sidebar-item-hover-bg)] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer flex items-center gap-1 group"
-            >
-              <Minus className="size-3.5 stroke-[2.5] group-hover:scale-110 transition-transform" />
-              <span className="text-[9px] lowercase font-semibold opacity-80">minimize all</span>
-            </button>
-
-            {/* Expand Option when everything is minimized */}
-            {!areAnyOpen && (
+          <div className="relative flex items-center">
+            <Search className="absolute left-2.5 size-3.5 text-slate-400 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter navigator..."
+              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border transition-all duration-150 outline-none placeholder:text-slate-400 font-medium"
+              style={{
+                backgroundColor: "var(--role-sidebar-subtle)",
+                borderColor: searchQuery ? "var(--role-accent)" : "var(--role-sidebar-border)",
+                color: "var(--role-sidebar-fg)",
+              }}
+            />
+            {searchQuery ? (
               <button
                 type="button"
-                onClick={expandAllFolders}
-                title="Expand All Folders"
-                className="p-1 rounded hover:bg-[var(--role-sidebar-item-hover-bg)] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 p-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                title="Clear filter"
               >
-                <Plus className="size-3.5 stroke-[2.5]" />
+                <X className="size-3 stroke-[2.5]" />
               </button>
+            ) : (
+              <span
+                className="absolute right-2 text-[9.5px] font-mono px-1 py-0.2 rounded border text-slate-400 pointer-events-none"
+                style={{
+                  backgroundColor: "var(--role-sidebar-bg)",
+                  borderColor: "var(--role-sidebar-border)",
+                }}
+              >
+                /
+              </span>
             )}
+          </div>
+
+          {/* ServiceNow Header Ribbon: Modules / Accordion Controls */}
+          <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
+            <span style={{ color: "var(--role-sidebar-section-title)" }}>
+              {isSearching ? "FILTER RESULTS" : "APPLICATION NAVIGATOR"}
+            </span>
+            <div className="flex items-center gap-1.5">
+              {openFolder !== null && !isSearching && (
+                <button
+                  type="button"
+                  onClick={handleMinimizeAll}
+                  title="Minimize Current Folder"
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all hover:bg-[var(--role-sidebar-item-hover-bg)] cursor-pointer"
+                  style={{ color: "var(--role-sidebar-section-title)" }}
+                >
+                  <Minus className="size-3 stroke-[2.5]" />
+                  <span>minimize</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* 2. Navigation Explorer Tree */}
-      <nav className="flex-1 p-2 space-y-1.5 overflow-y-auto">
+      {/* ============================================================ */}
+      {/* 3. NAVIGATION ITEMS & ACCORDION FOLDERS */}
+      {/* ============================================================ */}
+      <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar">
         {/* ============================================================ */}
-        {/* 1. DASHBOARD — USER ROLE SPECIFIC (Single Item, no folder) */}
+        {/* TOP-LEVEL 1: DASHBOARD (Single Root Item - No Folder) */}
         {/* ============================================================ */}
-        <RootFileItem
-          active={currentTab === "dashboard"}
-          onClick={() => onSelectTab("dashboard")}
-          icon={LayoutDashboard}
-          label={getRoleDashboardLabel()}
-          isShrunk={isShrunk}
-        />
+        {matchesSearch(getRoleDashboardLabel()) && (
+          <ServiceNowRootItem
+            active={currentTab === "dashboard"}
+            onClick={() => onSelectTab("dashboard")}
+            icon={LayoutDashboard}
+            label={getRoleDashboardLabel()}
+            isShrunk={isShrunk}
+            badge="LIVE"
+          />
+        )}
 
         {/* ============================================================ */}
-        {/* 2. LOGS — AS IT IS (Single Item, no folder) */}
+        {/* TOP-LEVEL 2: LOGS (Single Root Item - No Folder) */}
         {/* ============================================================ */}
-        <RootFileItem
-          active={currentTab === "logs"}
-          onClick={() => onSelectTab("logs")}
-          icon={FileText}
-          label="Operational Activity Logs"
-          isShrunk={isShrunk}
-        />
+        {matchesSearch("Activity & Audit Logs") && (
+          <ServiceNowRootItem
+            active={currentTab === "logs"}
+            onClick={() => onSelectTab("logs")}
+            icon={FileText}
+            label="Activity & Audit Logs"
+            isShrunk={isShrunk}
+          />
+        )}
 
         {/* ============================================================ */}
-        {/* 3. INVENTORY — FOR ALL */}
+        {/* MODULE CATEGORY 1: INVENTORY (FOR ALL) */}
         {/* ============================================================ */}
         {canSeeInventory && (
-          <TreeFolder
-            label="Inventory"
-            isOpen={openFolders.inventory}
-            onToggle={() => toggleFolder("inventory")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="Inventory & Stock"
+            folderKey="inventory"
+            isOpen={isSearching ? true : openFolder === "inventory"}
+            onToggle={() => handleToggleFolder("inventory")}
             icon={Boxes}
+            count={2}
+            isShrunk={isShrunk}
+            isActiveParent={["inventory", "stock"].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "inventory"}
-              onClick={() => onSelectTab("inventory")}
-              icon={Boxes}
-              label="Inventory Master"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "stock"}
-              onClick={() => onSelectTab("stock")}
-              icon={Package}
-              label="Raw Material Stock"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("Inventory Master") && (
+              <ServiceNowModuleItem
+                active={currentTab === "inventory"}
+                onClick={() => onSelectTab("inventory")}
+                icon={Boxes}
+                label="Inventory Master"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Raw Material Stock") && (
+              <ServiceNowModuleItem
+                active={currentTab === "stock"}
+                onClick={() => onSelectTab("stock")}
+                icon={Package}
+                label="Raw Material Stock"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* 4. REPORTS — FOR SUPERVISOR, ADMIN AND SUPERADMIN */}
+        {/* MODULE CATEGORY 2: REPORTS (SUPERVISOR, ADMIN, SUPERADMIN) */}
         {/* ============================================================ */}
         {canSeeReports && (
-          <TreeFolder
-            label="Reports"
-            isOpen={openFolders.reports}
-            onToggle={() => toggleFolder("reports")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="Project & Shift Reports"
+            folderKey="reports"
+            isOpen={isSearching ? true : openFolder === "reports"}
+            onToggle={() => handleToggleFolder("reports")}
             icon={BarChart3}
+            count={4}
+            isShrunk={isShrunk}
+            isActiveParent={[
+              "reports-progress",
+              "reports",
+              "reports-details",
+              "daily-reports",
+              "production",
+            ].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "reports-progress" || currentTab === "reports"}
-              onClick={() => onSelectTab("reports-progress")}
-              icon={Activity}
-              label="Project Progress"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "reports-details"}
-              onClick={() => onSelectTab("reports-details")}
-              icon={Layers}
-              label="Project Details"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "daily-reports"}
-              onClick={() => onSelectTab("daily-reports")}
-              icon={HardHat}
-              label="Daily Shift Reports (DPR)"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "production"}
-              onClick={() => onSelectTab("production")}
-              icon={Layers}
-              label="Fabrication Production"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("Project Progress") && (
+              <ServiceNowModuleItem
+                active={currentTab === "reports-progress" || currentTab === "reports"}
+                onClick={() => onSelectTab("reports-progress")}
+                icon={Activity}
+                label="Project Progress"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Project Details") && (
+              <ServiceNowModuleItem
+                active={currentTab === "reports-details"}
+                onClick={() => onSelectTab("reports-details")}
+                icon={Layers}
+                label="Project Details"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Daily Shift Reports (DPR)") && (
+              <ServiceNowModuleItem
+                active={currentTab === "daily-reports"}
+                onClick={() => onSelectTab("daily-reports")}
+                icon={HardHat}
+                label="Daily Shift Reports (DPR)"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Fabrication Production") && (
+              <ServiceNowModuleItem
+                active={currentTab === "production"}
+                onClick={() => onSelectTab("production")}
+                icon={Layers}
+                label="Fabrication Production"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* 5. ACCOUNTS — FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* MODULE CATEGORY 3: ACCOUNTS (ACCOUNTS, ADMIN, SUPERADMIN) */}
         {/* ============================================================ */}
         {canSeeAccounts && (
-          <TreeFolder
-            label="Accounts"
-            isOpen={openFolders.accounts}
-            onToggle={() => toggleFolder("accounts")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="Accounts & Ledger"
+            folderKey="accounts"
+            isOpen={isSearching ? true : openFolder === "accounts"}
+            onToggle={() => handleToggleFolder("accounts")}
             icon={Landmark}
+            count={3}
+            isShrunk={isShrunk}
+            isActiveParent={["accounts", "ledger", "supplies"].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "accounts"}
-              onClick={() => onSelectTab("accounts")}
-              icon={DollarSign}
-              label="Accounts & 3-Way Match"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "ledger"}
-              onClick={() => onSelectTab("ledger")}
-              icon={BookOpen}
-              label="Atomic Stock Ledger"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "supplies"}
-              onClick={() => onSelectTab("supplies")}
-              icon={Truck}
-              label="Inward Goods & Challans"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("Accounts & 3-Way Match") && (
+              <ServiceNowModuleItem
+                active={currentTab === "accounts"}
+                onClick={() => onSelectTab("accounts")}
+                icon={DollarSign}
+                label="Accounts & 3-Way Match"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Atomic Stock Ledger") && (
+              <ServiceNowModuleItem
+                active={currentTab === "ledger"}
+                onClick={() => onSelectTab("ledger")}
+                icon={BookOpen}
+                label="Atomic Stock Ledger"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Inward Goods & Challans") && (
+              <ServiceNowModuleItem
+                active={currentTab === "supplies"}
+                onClick={() => onSelectTab("supplies")}
+                icon={Truck}
+                label="Inward Goods & Challans"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* 6. PEOPLE AND HR — FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* MODULE CATEGORY 4: PEOPLE & HR (ACCOUNTS, ADMIN, SUPERADMIN) */}
         {/* ============================================================ */}
         {canSeePeople && (
-          <TreeFolder
-            label="People & HR"
-            isOpen={openFolders.people}
-            onToggle={() => toggleFolder("people")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="People & Workforce"
+            folderKey="people"
+            isOpen={isSearching ? true : openFolder === "people"}
+            onToggle={() => handleToggleFolder("people")}
             icon={Users}
+            count={2}
+            isShrunk={isShrunk}
+            isActiveParent={["employees", "attendance"].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "employees"}
-              onClick={() => onSelectTab("employees")}
-              icon={Users}
-              label="Personnel Directory"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "attendance"}
-              onClick={() => onSelectTab("attendance")}
-              icon={CalendarCheck}
-              label="Attendance Roster"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("Personnel Directory") && (
+              <ServiceNowModuleItem
+                active={currentTab === "employees"}
+                onClick={() => onSelectTab("employees")}
+                icon={Users}
+                label="Personnel Directory"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Attendance Roster") && (
+              <ServiceNowModuleItem
+                active={currentTab === "attendance"}
+                onClick={() => onSelectTab("attendance")}
+                icon={CalendarCheck}
+                label="Attendance Roster"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* 7. WORKBOOK — VISIBLE FOR ACC, ADMIN AND SUPERADMIN */}
+        {/* MODULE CATEGORY 5: WORKBOOKS (ACCOUNTS, ADMIN, SUPERADMIN) */}
         {/* ============================================================ */}
         {canSeeWorkbooks && (
-          <TreeFolder
-            label="Workbooks"
-            isOpen={openFolders.workbooks}
-            onToggle={() => toggleFolder("workbooks")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="Spreadsheet Workbooks"
+            folderKey="workbooks"
+            isOpen={isSearching ? true : openFolder === "workbooks"}
+            onToggle={() => handleToggleFolder("workbooks")}
             icon={FileSpreadsheet}
+            count={2}
+            isShrunk={isShrunk}
+            isActiveParent={["attendance", "inventory-workbook"].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "attendance"}
-              onClick={() => onSelectTab("attendance")}
-              icon={FileSpreadsheet}
-              label="Attendance Workbook"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "inventory-workbook"}
-              onClick={() => onSelectTab("inventory-workbook")}
-              icon={FileSpreadsheet}
-              label="Inventory Spreadsheet"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("Attendance Workbook") && (
+              <ServiceNowModuleItem
+                active={currentTab === "attendance"}
+                onClick={() => onSelectTab("attendance")}
+                icon={FileSpreadsheet}
+                label="Attendance Workbook"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Inventory Spreadsheet") && (
+              <ServiceNowModuleItem
+                active={currentTab === "inventory-workbook"}
+                onClick={() => onSelectTab("inventory-workbook")}
+                icon={FileSpreadsheet}
+                label="Inventory Spreadsheet"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* 8. ADMIN AND SECURITY — FOR ADMIN AND SUPERADMIN */}
+        {/* MODULE CATEGORY 6: ADMIN & SECURITY (ADMIN, SUPERADMIN) */}
         {/* ============================================================ */}
         {canSeeSecurity && (
-          <TreeFolder
-            label="Admin & Security"
-            isOpen={openFolders.security}
-            onToggle={() => toggleFolder("security")}
-            isShrunk={isShrunk}
+          <ServiceNowModuleCategory
+            label="System & Security"
+            folderKey="security"
+            isOpen={isSearching ? true : openFolder === "security"}
+            onToggle={() => handleToggleFolder("security")}
             icon={ShieldCheck}
+            count={2}
+            isShrunk={isShrunk}
+            isActiveParent={["users", "settings"].includes(currentTab)}
           >
-            <TreeFileItem
-              active={currentTab === "users"}
-              onClick={() => onSelectTab("users")}
-              icon={ShieldCheck}
-              label="User Management"
-              isShrunk={isShrunk}
-            />
-            <TreeFileItem
-              active={currentTab === "settings"}
-              onClick={() => onSelectTab("settings")}
-              icon={Settings}
-              label="Plant Configuration"
-              isShrunk={isShrunk}
-            />
-          </TreeFolder>
+            {matchesSearch("User Management") && (
+              <ServiceNowModuleItem
+                active={currentTab === "users"}
+                onClick={() => onSelectTab("users")}
+                icon={ShieldCheck}
+                label="User Management"
+                isShrunk={isShrunk}
+              />
+            )}
+            {matchesSearch("Plant Configuration") && (
+              <ServiceNowModuleItem
+                active={currentTab === "settings"}
+                onClick={() => onSelectTab("settings")}
+                icon={Settings}
+                label="Plant Configuration"
+                isShrunk={isShrunk}
+              />
+            )}
+          </ServiceNowModuleCategory>
         )}
 
         {/* ============================================================ */}
-        {/* TEAM CHAT — SINGLE ITEM (No folder) */}
+        {/* TOP-LEVEL 3: TEAM CHAT (Single Root Item - No Folder) */}
         {/* ============================================================ */}
-        <RootFileItem
-          active={currentTab === "chat"}
-          onClick={() => onSelectTab("chat")}
-          icon={MessageSquare}
-          label="Team Channels & Chat"
-          isShrunk={isShrunk}
-        />
+        {matchesSearch("Team Channels & Chat") && (
+          <ServiceNowRootItem
+            active={currentTab === "chat"}
+            onClick={() => onSelectTab("chat")}
+            icon={MessageSquare}
+            label="Team Channels & Chat"
+            isShrunk={isShrunk}
+          />
+        )}
       </nav>
 
-      {/* 3. User Profile & Logout Footer */}
+      {/* ============================================================ */}
+      {/* 4. SERVICENOW USER PROFILE & LOGOUT FOOTER */}
+      {/* ============================================================ */}
       <div
         className="p-2.5 border-t"
         style={{
@@ -540,20 +668,25 @@ export function Kfab360Sidebar({
       >
         <div className={`flex items-center ${isShrunk ? "justify-center" : "justify-between"} gap-2`}>
           <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className="size-9 rounded-full text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs"
-              style={{ backgroundColor: "var(--role-primary)" }}
-            >
-              {(currentUser.name || "U").slice(0, 2).toUpperCase()}
+            {/* User Avatar with Status Indicator */}
+            <div className="relative shrink-0">
+              <div
+                className="size-9 rounded-xl text-white font-bold flex items-center justify-center text-xs shadow-xs"
+                style={{ backgroundColor: "var(--role-primary)" }}
+              >
+                {(currentUser.name || "U").slice(0, 2).toUpperCase()}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-[#16A34A] border-2 border-white ring-1 ring-[#BBF7D0]" />
             </div>
+
             {!isShrunk && (
               <div className="min-w-0">
-                <p className="text-xs font-bold truncate" style={{ color: "var(--role-sidebar-fg)" }}>
+                <p className="text-xs font-bold truncate leading-tight" style={{ color: "var(--role-sidebar-fg)" }}>
                   {currentUser.name}
                 </p>
-                <div className="flex items-center gap-1 mt-0.5">
+                <div className="flex items-center gap-1.5 mt-0.5">
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border"
+                    className="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider border"
                     style={{
                       backgroundColor: "var(--role-badge-bg)",
                       color: "var(--role-badge-text)",
@@ -567,11 +700,12 @@ export function Kfab360Sidebar({
             )}
           </div>
 
+          {/* Quick Sign Out Action */}
           {!isShrunk && (
             <button
               onClick={onLogout}
               title="Sign Out of Session"
-              className="p-2 rounded-lg transition-colors cursor-pointer shrink-0 opacity-70 hover:opacity-100"
+              className="p-2 rounded-lg transition-all duration-150 cursor-pointer shrink-0 opacity-70 hover:opacity-100 hover:bg-[var(--role-sidebar-item-hover-bg)]"
               style={{ color: "var(--role-sidebar-fg)" }}
             >
               <LogOut className="size-4" />
@@ -584,84 +718,100 @@ export function Kfab360Sidebar({
 }
 
 // ============================================================================
-// ANTIGRAVITY IDE STYLE TREE FOLDER COMPONENT (Arrow + Folder + Name)
+// SERVICENOW STYLE ACCORDION MODULE CATEGORY (Application Menu)
 // ============================================================================
 
-interface TreeFolderProps {
+interface ServiceNowModuleCategoryProps {
   label: string;
+  folderKey: string;
   isOpen: boolean;
   onToggle: () => void;
-  badge?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  count?: number;
   isShrunk?: boolean;
-  icon?: React.ComponentType<{ className?: string }>;
+  isActiveParent?: boolean;
   children?: React.ReactNode;
 }
 
-function TreeFolder({
+function ServiceNowModuleCategory({
   label,
   isOpen,
   onToggle,
-  badge,
+  icon: Icon,
+  count,
   isShrunk = false,
+  isActiveParent = false,
   children,
-}: TreeFolderProps) {
+}: ServiceNowModuleCategoryProps) {
   if (isShrunk) {
     return <div className="space-y-1">{children}</div>;
   }
 
   return (
     <div className="select-none mb-1">
-      {/* Arrow then Folder then Name (Antigravity Explorer Style) */}
+      {/* ServiceNow Application Menu Header */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-all duration-150 cursor-pointer group hover:bg-[var(--role-sidebar-item-hover-bg)]"
-        style={{ color: "var(--role-sidebar-section-title)" }}
+        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
+          isOpen
+            ? "bg-[var(--role-sidebar-subtle)] font-bold shadow-2xs border border-[var(--role-sidebar-border)]/70"
+            : "hover:bg-[var(--role-sidebar-item-hover-bg)] font-semibold border border-transparent"
+        }`}
+        style={{
+          color: isOpen ? "var(--role-sidebar-fg)" : "var(--role-sidebar-section-title)",
+        }}
       >
-        <div className="flex items-center gap-1.5 min-w-0">
-          {/* Arrow Indicator: ChevronRight or ChevronDown */}
-          <span className="shrink-0 transition-transform duration-150 text-slate-400 group-hover:text-slate-700 dark:text-slate-500">
-            {isOpen ? (
-              <ChevronDown className="size-3.5 stroke-[2.5]" />
-            ) : (
-              <ChevronRight className="size-3.5 stroke-[2.5]" />
-            )}
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* Rotating Chevron Indicator */}
+          <span
+            className={`shrink-0 transition-transform duration-200 ${
+              isOpen
+                ? "rotate-90 text-[var(--role-accent)]"
+                : "text-slate-400 group-hover:text-slate-600 dark:text-slate-500"
+            }`}
+          >
+            <ChevronRight className="size-3.5 stroke-[2.5]" />
           </span>
 
-          {/* Folder Icon: Open or Closed */}
-          {isOpen ? (
-            <FolderOpen className="size-4 shrink-0 text-amber-500 fill-amber-400/20" />
-          ) : (
-            <Folder className="size-4 shrink-0 text-amber-500/80 fill-amber-400/10" />
-          )}
+          {/* ServiceNow Domain Icon Frame */}
+          <div
+            className={`size-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+              isOpen
+                ? "bg-[var(--role-primary)] text-white shadow-2xs"
+                : "bg-[var(--role-sidebar-subtle)] text-[var(--role-sidebar-fg)] border border-[var(--role-sidebar-border)]/80 group-hover:border-[var(--role-accent)]"
+            }`}
+          >
+            <Icon className="size-3.5 shrink-0" />
+          </div>
 
-          {/* Folder Name */}
+          {/* Category Title */}
           <span
-            className="truncate uppercase font-bold tracking-wider text-[11px]"
+            className="truncate uppercase text-[11px] tracking-wider"
             style={{ color: "var(--role-sidebar-fg)" }}
           >
             {label}
           </span>
         </div>
 
-        {badge && (
+        {/* Counter Badge */}
+        {count !== undefined && (
           <span
-            className="text-[9px] px-1.5 py-0.2 rounded font-semibold uppercase tracking-wider shrink-0"
-            style={{
-              backgroundColor: "var(--role-sidebar-subtle)",
-              color: "var(--role-sidebar-section-title)",
-              border: "1px solid var(--role-sidebar-border)",
-            }}
+            className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold tracking-wider shrink-0 transition-colors ${
+              isOpen
+                ? "bg-[var(--role-primary)] text-white"
+                : "bg-[var(--role-sidebar-bg)] text-slate-500 border border-[var(--role-sidebar-border)] group-hover:border-slate-300"
+            }`}
           >
-            {badge}
+            {count}
           </span>
         )}
       </button>
 
-      {/* Indented Sub-Tree with Antigravity IDE Vertical Guide Line */}
+      {/* Indented Module Items with ServiceNow Vertical Tree Hierarchy Guide */}
       {isOpen && (
         <div
-          className="ml-3.5 pl-2.5 border-l-2 my-0.5 space-y-0.5"
+          className="ml-4 pl-2.5 border-l-2 my-1 space-y-0.5 transition-all duration-200 ease-in-out"
           style={{ borderColor: "var(--role-sidebar-border)" }}
         >
           {children}
@@ -672,10 +822,10 @@ function TreeFolder({
 }
 
 // ============================================================================
-// ANTIGRAVITY IDE STYLE TREE FILE / LEAF ITEM COMPONENT
+// SERVICENOW STYLE MODULE ITEM (Sub-Item / Leaf View)
 // ============================================================================
 
-interface TreeFileItemProps {
+interface ServiceNowModuleItemProps {
   active: boolean;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
@@ -684,14 +834,14 @@ interface TreeFileItemProps {
   isShrunk?: boolean;
 }
 
-function TreeFileItem({
+function ServiceNowModuleItem({
   active,
   onClick,
   icon: Icon,
   label,
   badge,
   isShrunk = false,
-}: TreeFileItemProps) {
+}: ServiceNowModuleItemProps) {
   return (
     <button
       onClick={onClick}
@@ -699,7 +849,9 @@ function TreeFileItem({
       className={`relative w-full flex items-center ${
         isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-1.5 rounded-lg"
       } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group ${
-        active ? "font-bold shadow-xs" : "font-medium hover:bg-[var(--role-sidebar-item-hover-bg)]"
+        active
+          ? "font-bold shadow-xs"
+          : "font-medium hover:bg-[var(--role-sidebar-item-hover-bg)]"
       }`}
       style={
         active
@@ -712,10 +864,10 @@ function TreeFileItem({
             }
       }
     >
-      {/* Role-themed Accent Indicator Bar on Left Edge */}
+      {/* ServiceNow Active Left Accent Indicator Pill */}
       {active && (
         <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 rounded-r-full"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4.5 rounded-r-full"
           style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
         />
       )}
@@ -723,7 +875,7 @@ function TreeFileItem({
       <div className="flex items-center gap-2 min-w-0">
         <Icon
           className={`size-3.5 shrink-0 transition-opacity ${
-            active ? "opacity-100" : "opacity-70 group-hover:opacity-100"
+            active ? "opacity-100" : "opacity-65 group-hover:opacity-100"
           }`}
         />
         {!isShrunk && <span className="truncate text-[11.5px]">{label}</span>}
@@ -731,7 +883,7 @@ function TreeFileItem({
 
       {!isShrunk && badge && (
         <span
-          className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0"
+          className="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider shrink-0"
           style={
             active
               ? {
@@ -753,10 +905,10 @@ function TreeFileItem({
 }
 
 // ============================================================================
-// TOP-LEVEL SINGLE ITEM COMPONENT (For categories with only 1 child: Dashboard, Logs, Chat)
+// SERVICENOW STYLE TOP-LEVEL ROOT ITEM (Dashboard, Logs, Chat)
 // ============================================================================
 
-interface RootFileItemProps {
+interface ServiceNowRootItemProps {
   active: boolean;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
@@ -765,20 +917,20 @@ interface RootFileItemProps {
   isShrunk?: boolean;
 }
 
-function RootFileItem({
+function ServiceNowRootItem({
   active,
   onClick,
   icon: Icon,
   label,
   badge,
   isShrunk = false,
-}: RootFileItemProps) {
+}: ServiceNowRootItemProps) {
   return (
     <button
       onClick={onClick}
       title={isShrunk ? label : undefined}
       className={`relative w-full flex items-center ${
-        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-2 rounded-lg"
+        isShrunk ? "justify-center p-2.5 rounded-xl" : "justify-between px-2.5 py-2 rounded-xl"
       } text-left text-xs transition-all duration-150 cursor-pointer overflow-hidden group mb-1 ${
         active
           ? "font-bold shadow-xs"
@@ -795,26 +947,30 @@ function RootFileItem({
             }
       }
     >
-      {/* Role-themed Accent Indicator Bar on Left Edge */}
+      {/* ServiceNow Active Left Accent Indicator Pill */}
       {active && (
         <span
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-4.5 rounded-r-full"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-5 rounded-r-full"
           style={{ backgroundColor: "var(--role-sidebar-item-active-accent)" }}
         />
       )}
 
       <div className="flex items-center gap-2.5 min-w-0">
-        <Icon
-          className={`size-4 shrink-0 transition-opacity ${
-            active ? "opacity-100" : "opacity-75 group-hover:opacity-100"
+        <div
+          className={`size-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+            active
+              ? "bg-[var(--role-sidebar-item-active-accent)] text-white shadow-2xs"
+              : "bg-[var(--role-sidebar-subtle)] text-[var(--role-sidebar-fg)] border border-[var(--role-sidebar-border)]/80 group-hover:border-[var(--role-accent)]"
           }`}
-        />
-        {!isShrunk && <span className="truncate text-xs">{label}</span>}
+        >
+          <Icon className="size-3.5 shrink-0" />
+        </div>
+        {!isShrunk && <span className="truncate text-xs font-semibold">{label}</span>}
       </div>
 
       {!isShrunk && badge && (
         <span
-          className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0"
+          className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0"
           style={
             active
               ? {
