@@ -1,49 +1,32 @@
 -- ==============================================================================
 -- Migration 009: Drop 10 Requested Tables and Clean All Mock Data
--- Purpose: Safely drop the 10 specified tables, their indexes, constraints,
---          triggers, and all associated mock/test records.
---
--- Target Tables Dropped:
---   1. public.project_item_stage_status
---   2. public.project_items
---   3. public.project_stages
---   4. public.projects
---   5. public.inventory_issues
---   6. public.inventory_transactions
---   7. public.inventory_items
---   8. public.attendance_records
---   9. public.employees
---  10. public.companies
---
--- PRESERVED SYSTEM & CORE TABLES (NOT TOUCHED):
---   - auth.users (Supabase User Credentials)
---   - public.profiles (User Profiles & Staff Accounts)
---   - public.roles (Role Hierarchy: SUPER_ADMIN, ADMIN, etc.)
---   - public.permissions (Granular Permissions)
---   - public.role_permissions (RBAC Mappings)
---   - public.audit_logs (Security Audit Trail)
---   - public.user_logs (User Activity Log with 7-day retention)
+-- Purpose: Drop all prototype, demo, and unneeded tables from the database.
 -- ==============================================================================
 
--- 1. Drop Projects & Progress Tracking Tables (in dependency order)
+-- 1. Projects & Progress Tracking Module
 DROP TABLE IF EXISTS public.project_item_stage_status CASCADE;
 DROP TABLE IF EXISTS public.project_items CASCADE;
 DROP TABLE IF EXISTS public.project_stages CASCADE;
 DROP TABLE IF EXISTS public.projects CASCADE;
 
--- 2. Drop Inventory & Warehouse Management Tables
+-- 2. Inventory & Warehouse Management Module
 DROP TABLE IF EXISTS public.inventory_issues CASCADE;
 DROP TABLE IF EXISTS public.inventory_transactions CASCADE;
 DROP TABLE IF EXISTS public.inventory_items CASCADE;
 
--- 3. Drop Personnel & Attendance Tables
+-- 3. Personnel & Attendance Module
 DROP TABLE IF EXISTS public.attendance_records CASCADE;
 DROP TABLE IF EXISTS public.employees CASCADE;
 DROP TABLE IF EXISTS public.companies CASCADE;
 
--- (Note: CASCADE automatically removes all dependent triggers, foreign keys, indexes, and RLS policies)
+-- 4. Shop Floor Prototype & Mock Data Tables (Shown in Table Editor)
+DROP TABLE IF EXISTS public.machines CASCADE;
+DROP TABLE IF EXISTS public.material_requisitions CASCADE;
+DROP TABLE IF EXISTS public.production_logs CASCADE;
+DROP TABLE IF EXISTS public.qaqc_records CASCADE;
+DROP TABLE IF EXISTS public.shop_issues CASCADE;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'KFAB360 Table Drop Complete: The 10 specified tables and all their data have been removed. Core auth, profiles, roles, and logs remain active.';
+  RAISE NOTICE 'KFAB360 Table Cleanup Complete: All prototype/mock tables dropped successfully.';
 END $$;
