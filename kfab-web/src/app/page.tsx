@@ -207,11 +207,15 @@ export default function KfabBasicApp() {
     }
 
     if (typeof window !== "undefined") {
-      if (window.location.pathname.startsWith("/logs") || window.location.search.includes("tab=logs")) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab") as NavTab | null;
+      if (tabParam && TAB_TITLES[tabParam]) {
+        setCurrentTab(tabParam);
+      } else if (window.location.pathname.startsWith("/logs")) {
         setCurrentTab("logs");
-      } else if (window.location.pathname.startsWith("/reports") || window.location.search.includes("tab=reports")) {
+      } else if (window.location.pathname.startsWith("/reports")) {
         setCurrentTab("reports");
-      } else if (window.location.pathname.startsWith("/inventory") || window.location.search.includes("tab=inventory")) {
+      } else if (window.location.pathname.startsWith("/inventory")) {
         setCurrentTab("inventory");
       }
     }
@@ -242,11 +246,13 @@ export default function KfabBasicApp() {
       if (tab === "logs") {
         window.history.pushState(null, "", "/logs");
       } else if (tab === "reports" || tab === "reports-progress" || tab === "reports-details") {
-        window.history.pushState(null, "", "/reports");
-      } else if (tab === "inventory" || tab === "inventory-workbook") {
-        window.history.pushState(null, "", "/inventory");
-      } else {
+        window.history.pushState(null, "", "/reports?tab=" + tab);
+      } else if (tab === "inventory" || tab === "inventory-workbook" || tab === "stock") {
+        window.history.pushState(null, "", "/inventory?tab=" + tab);
+      } else if (tab === "dashboard") {
         window.history.pushState(null, "", "/");
+      } else {
+        window.history.pushState(null, "", "/?tab=" + tab);
       }
     }
   };
@@ -271,13 +277,7 @@ export default function KfabBasicApp() {
       <LoginView
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          if (user.role === "SUPERVISOR") {
-            setCurrentTab("daily-reports");
-          } else if (user.role === "ACCOUNTANT") {
-            setCurrentTab("accounts");
-          } else {
-            setCurrentTab("dashboard");
-          }
+          setCurrentTab("dashboard");
         }}
       />
     );

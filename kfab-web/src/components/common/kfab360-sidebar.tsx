@@ -62,11 +62,13 @@ interface Kfab360SidebarProps {
 }
 
 // Maps any tab to its parent category folder key
-function getFolderForTab(tab: NavTab): string | null {
+function getFolderForTab(tab: NavTab, openFolder?: string | null): string | null {
   switch (tab) {
     case "inventory":
     case "stock":
       return "inventory";
+    case "inventory-workbook":
+      return openFolder === "workbooks" ? "workbooks" : "inventory";
     case "reports":
     case "reports-progress":
     case "reports-details":
@@ -79,10 +81,8 @@ function getFolderForTab(tab: NavTab): string | null {
       return "accounts";
     case "employees":
       return "people";
-    case "inventory-workbook":
-      return "workbooks";
     case "attendance":
-      return "people";
+      return openFolder === "workbooks" ? "workbooks" : "people";
     case "users":
     case "settings":
       return "security";
@@ -102,13 +102,16 @@ export function Kfab360Sidebar({
   const isSupervisor = currentUser.role === "SUPERVISOR";
   const isAccountant = currentUser.role === "ACCOUNTANT" || currentUser.role === "ACCOUNT";
 
-  // Role visibility permissions
+  // Role visibility permissions strictly adhering to specification
+  const canSeeDashboard = true;
+  const canSeeLogs = true;
   const canSeeInventory = true;
-  const canSeeReports = isSupervisor || isAdmin || isSuperAdmin;
-  const canSeeAccounts = isAccountant || isAdmin || isSuperAdmin;
-  const canSeePeople = isAccountant || isAdmin || isSuperAdmin;
-  const canSeeWorkbooks = isAccountant || isAdmin || isSuperAdmin;
-  const canSeeSecurity = isAdmin || isSuperAdmin;
+  const canSeeInventorySpreadsheets = isSuperAdmin || isAdmin || isAccountant; // hidden for SUPERVISOR
+  const canSeeReports = isSuperAdmin || isAdmin || isSupervisor; // hidden for ACCOUNT
+  const canSeeAccounts = isSuperAdmin || isAdmin || isAccountant; // hidden for SUPERVISOR
+  const canSeePeople = isSuperAdmin || isAdmin || isAccountant; // hidden for SUPERVISOR
+  const canSeeWorkbooks = isSuperAdmin || isAdmin || isAccountant; // hidden for SUPERVISOR
+  const canSeeSecurity = isSuperAdmin || isAdmin; // hidden for ACCOUNT and SUPERVISOR
 
   // Shrinkable/collapsible full sidebar state
   const [isShrunk, setIsShrunk] = useState(false);
@@ -121,11 +124,28 @@ export function Kfab360Sidebar({
   // When openFolder is null, all folders are minimized
   const [openFolder, setOpenFolder] = useState<string | null>(null);
 
+  // Active parent status calculation
+  const isInventoryActive =
+    ["inventory", "stock"].includes(currentTab) ||
+    (currentTab === "inventory-workbook" && openFolder !== "workbooks");
+  const isReportsActive =
+    ["reports", "reports-progress", "reports-details", "daily-reports", "production"].includes(currentTab);
+  const isAccountsActive =
+    ["accounts", "ledger", "supplies"].includes(currentTab);
+  const isPeopleActive =
+    currentTab === "employees" ||
+    (currentTab === "attendance" && openFolder !== "workbooks");
+  const isWorkbooksActive =
+    (currentTab === "inventory-workbook" && openFolder === "workbooks") ||
+    (currentTab === "attendance" && openFolder === "workbooks");
+  const isSecurityActive =
+    ["users", "settings"].includes(currentTab);
+
   // Whenever the active tab changes:
   // If it's a child tab inside a folder -> open its parent folder
-  // If it's an Overview tab (dashboard, logs, chat) -> minimize all Workspace Operations!
+  // If it's an Overview tab (dashboard, logs) -> minimize all accordion folders
   useEffect(() => {
-    const parent = getFolderForTab(currentTab);
+    const parent = getFolderForTab(currentTab, openFolder);
     if (parent) {
       setOpenFolder(parent);
     } else {
@@ -133,8 +153,8 @@ export function Kfab360Sidebar({
     }
   }, [currentTab]);
 
-  // Handler for clicking any Overview item (minimizes all Workspace Operations)
-  const handleSelectOverviewTab = (tab: NavTab) => {
+  // Handler for clicking any root item (minimizes all accordion folders)
+  const handleSelectRootTab = (tab: NavTab) => {
     setOpenFolder(null);
     onSelectTab(tab);
   };
@@ -185,22 +205,35 @@ export function Kfab360Sidebar({
       onSelectTab("dashboard");
     } else if (["users", "settings"].includes(currentTab) && !canSeeSecurity) {
       onSelectTab("dashboard");
+    } else if (
+      currentTab === "inventory-workbook" &&
+      !canSeeInventorySpreadsheets &&
+      !canSeeWorkbooks
+    ) {
+      onSelectTab("dashboard");
     }
-  }, [currentUser.role, currentTab, canSeeReports, canSeeAccounts, canSeePeople, canSeeSecurity, onSelectTab]);
-
-  // Role-specific dashboard name
-  const getRoleDashboardLabel = () => {
-    if (isSuperAdmin) return "Executive Operations";
-    if (isAdmin) return "Plant Administration";
-    if (isSupervisor) return "Fabrication & Bay Operations";
-    if (isAccountant) return "Financial & Accounts Ledger";
-    return "Operations Overview";
-  };
+  }, [
+    currentUser.role,
+    currentTab,
+    canSeeReports,
+    canSeeAccounts,
+    canSeePeople,
+    canSeeSecurity,
+    canSeeInventorySpreadsheets,
+    canSeeWorkbooks,
+    onSelectTab,
+  ]);
 
   // Search filter helper to check if text matches
   const matchesSearch = (text: string) => {
     if (!searchQuery.trim()) return true;
     return text.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  };
+
+  const categoryMatches = (categoryLabel: string, childLabels: string[]) => {
+    if (!searchQuery.trim()) return true;
+    if (matchesSearch(categoryLabel)) return true;
+    return childLabels.some((cl) => matchesSearch(cl));
   };
 
   const isSearching = searchQuery.trim().length > 0;
@@ -347,50 +380,9 @@ export function Kfab360Sidebar({
       {/* 3. NAVIGATION ITEMS & ACCORDION FOLDERS */}
       {/* ============================================================ */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto custom-scrollbar">
-        {/* SECTION 1: OVERVIEW (Image 1 'Folders' inspired) */}
         {!isShrunk && (
-          <div className="text-[11px] font-semibold text-slate-400/90 px-3 pt-1.5 pb-1 tracking-normal">
-            Overview
-          </div>
-        )}
-
-        {/* Root 1: Dashboard */}
-        {matchesSearch(getRoleDashboardLabel()) && (
-          <ServiceNowRootItem
-            active={currentTab === "dashboard"}
-            onClick={() => handleSelectOverviewTab("dashboard")}
-            icon={LayoutDashboard}
-            label={getRoleDashboardLabel()}
-            isShrunk={isShrunk}
-          />
-        )}
-
-        {/* Root 2: Logs */}
-        {matchesSearch("Activity & Audit Logs") && (
-          <ServiceNowRootItem
-            active={currentTab === "logs"}
-            onClick={() => handleSelectOverviewTab("logs")}
-            icon={FileText}
-            label="Activity & Audit Logs"
-            isShrunk={isShrunk}
-          />
-        )}
-
-        {/* Root 3: Team Channels & Chat */}
-        {matchesSearch("Team Channels & Chat") && (
-          <ServiceNowRootItem
-            active={currentTab === "chat"}
-            onClick={() => handleSelectOverviewTab("chat")}
-            icon={MessageSquare}
-            label="Team Channels & Chat"
-            isShrunk={isShrunk}
-          />
-        )}
-
-        {/* SECTION 2: WORKSPACE OPERATIONS (Image 1 'Neuralink Space' inspired) */}
-        {!isShrunk && (
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400/90 px-3 pt-3.5 pb-1 tracking-normal">
-            <span>Workspace Operations</span>
+          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400/90 px-3 pt-1 pb-1 tracking-normal">
+            <span>Navigation</span>
             {openFolder !== null && !isSearching && (
               <button
                 type="button"
@@ -405,241 +397,275 @@ export function Kfab360Sidebar({
         )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 1: INVENTORY (FOR ALL) */}
+        {/* 1. DASHBOARD (ALL ROLES) */}
         {/* ============================================================ */}
-        {canSeeInventory && (
-          <ServiceNowModuleCategory
-            label="Inventory & Stock"
-            folderKey="inventory"
-            isOpen={isSearching ? true : openFolder === "inventory"}
-            onToggle={() => handleToggleFolder("inventory")}
-            icon={Boxes}
+        {canSeeDashboard && matchesSearch("Dashboard") && (
+          <ServiceNowRootItem
+            active={currentTab === "dashboard"}
+            onClick={() => handleSelectRootTab("dashboard")}
+            icon={LayoutDashboard}
+            label="Dashboard"
             isShrunk={isShrunk}
-            isActiveParent={["inventory", "stock"].includes(currentTab)}
-          >
-            {matchesSearch("Inventory Master") && (
-              <ServiceNowModuleItem
-                active={currentTab === "inventory"}
-                onClick={() => onSelectTab("inventory")}
-                icon={Boxes}
-                label="Inventory Master"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Raw Material Stock") && (
-              <ServiceNowModuleItem
-                active={currentTab === "stock"}
-                onClick={() => onSelectTab("stock")}
-                icon={Package}
-                label="Raw Material Stock"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
+          />
         )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 2: REPORTS (SUPERVISOR, ADMIN, SUPERADMIN) */}
+        {/* 2. LOGS (ALL ROLES) */}
         {/* ============================================================ */}
-        {canSeeReports && (
-          <ServiceNowModuleCategory
-            label="Project & Shift Reports"
-            folderKey="reports"
-            isOpen={isSearching ? true : openFolder === "reports"}
-            onToggle={() => handleToggleFolder("reports")}
-            icon={BarChart3}
+        {canSeeLogs && matchesSearch("Logs") && (
+          <ServiceNowRootItem
+            active={currentTab === "logs"}
+            onClick={() => handleSelectRootTab("logs")}
+            icon={FileText}
+            label="Logs"
             isShrunk={isShrunk}
-            isActiveParent={[
-              "reports-progress",
-              "reports",
-              "reports-details",
-              "daily-reports",
-              "production",
-            ].includes(currentTab)}
-          >
-            {matchesSearch("Project Progress") && (
-              <ServiceNowModuleItem
-                active={currentTab === "reports-progress" || currentTab === "reports"}
-                onClick={() => onSelectTab("reports-progress")}
-                icon={Activity}
-                label="Project Progress"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Project Details") && (
-              <ServiceNowModuleItem
-                active={currentTab === "reports-details"}
-                onClick={() => onSelectTab("reports-details")}
-                icon={Layers}
-                label="Project Details"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Daily Shift Reports (DPR)") && (
-              <ServiceNowModuleItem
-                active={currentTab === "daily-reports"}
-                onClick={() => onSelectTab("daily-reports")}
-                icon={HardHat}
-                label="Daily Shift Reports (DPR)"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Fabrication Production") && (
-              <ServiceNowModuleItem
-                active={currentTab === "production"}
-                onClick={() => onSelectTab("production")}
-                icon={Layers}
-                label="Fabrication Production"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
+          />
         )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 3: ACCOUNTS (ACCOUNTS, ADMIN, SUPERADMIN) */}
+        {/* 3. INVENTORY (ALL ROLES - SPREADSHEETS HIDDEN FOR SUPERVISOR) */}
         {/* ============================================================ */}
-        {canSeeAccounts && (
-          <ServiceNowModuleCategory
-            label="Accounts & Ledger"
-            folderKey="accounts"
-            isOpen={isSearching ? true : openFolder === "accounts"}
-            onToggle={() => handleToggleFolder("accounts")}
-            icon={Landmark}
-            isShrunk={isShrunk}
-            isActiveParent={["accounts", "ledger", "supplies"].includes(currentTab)}
-          >
-            {matchesSearch("Accounts & 3-Way Match") && (
-              <ServiceNowModuleItem
-                active={currentTab === "accounts"}
-                onClick={() => onSelectTab("accounts")}
-                icon={DollarSign}
-                label="Accounts & 3-Way Match"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Atomic Stock Ledger") && (
-              <ServiceNowModuleItem
-                active={currentTab === "ledger"}
-                onClick={() => onSelectTab("ledger")}
-                icon={BookOpen}
-                label="Atomic Stock Ledger"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Inward Goods & Challans") && (
-              <ServiceNowModuleItem
-                active={currentTab === "supplies"}
-                onClick={() => onSelectTab("supplies")}
-                icon={Truck}
-                label="Inward Goods & Challans"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
-        )}
+        {canSeeInventory &&
+          categoryMatches("Inventory", [
+            "Materials",
+            "Raw Material",
+            ...(canSeeInventorySpreadsheets ? ["Spreadsheets"] : []),
+          ]) && (
+            <ServiceNowModuleCategory
+              label="Inventory"
+              folderKey="inventory"
+              isOpen={isSearching ? true : openFolder === "inventory"}
+              onToggle={() => handleToggleFolder("inventory")}
+              icon={Boxes}
+              isShrunk={isShrunk}
+              isActiveParent={isInventoryActive}
+            >
+              {matchesSearch("Materials") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "inventory"}
+                  onClick={() => onSelectTab("inventory")}
+                  icon={Boxes}
+                  label="Materials"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Raw Material") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "stock"}
+                  onClick={() => onSelectTab("stock")}
+                  icon={Package}
+                  label="Raw Material"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {canSeeInventorySpreadsheets && matchesSearch("Spreadsheets") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "inventory-workbook" && openFolder !== "workbooks"}
+                  onClick={() => onSelectTab("inventory-workbook")}
+                  icon={FileSpreadsheet}
+                  label="Spreadsheets"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 4: PEOPLE & HR (ACCOUNTS, ADMIN, SUPERADMIN) */}
+        {/* 4. REPORTS (SUPER_ADMIN, ADMIN, SUPERVISOR - HIDDEN FOR ACCOUNT) */}
         {/* ============================================================ */}
-        {canSeePeople && (
-          <ServiceNowModuleCategory
-            label="People & Workforce"
-            folderKey="people"
-            isOpen={isSearching ? true : openFolder === "people"}
-            onToggle={() => handleToggleFolder("people")}
-            icon={Users}
-            isShrunk={isShrunk}
-            isActiveParent={["employees", "attendance"].includes(currentTab)}
-          >
-            {matchesSearch("Personnel Directory") && (
-              <ServiceNowModuleItem
-                active={currentTab === "employees"}
-                onClick={() => onSelectTab("employees")}
-                icon={Users}
-                label="Personnel Directory"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Attendance Roster") && (
-              <ServiceNowModuleItem
-                active={currentTab === "attendance"}
-                onClick={() => onSelectTab("attendance")}
-                icon={CalendarCheck}
-                label="Attendance Roster"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
-        )}
+        {canSeeReports &&
+          categoryMatches("Reports", ["Project Progress", "Project Details"]) && (
+            <ServiceNowModuleCategory
+              label="Reports"
+              folderKey="reports"
+              isOpen={isSearching ? true : openFolder === "reports"}
+              onToggle={() => handleToggleFolder("reports")}
+              icon={BarChart3}
+              isShrunk={isShrunk}
+              isActiveParent={isReportsActive}
+            >
+              {matchesSearch("Project Progress") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "reports-progress" || currentTab === "reports"}
+                  onClick={() => onSelectTab("reports-progress")}
+                  icon={Activity}
+                  label="Project Progress"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Project Details") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "reports-details"}
+                  onClick={() => onSelectTab("reports-details")}
+                  icon={Layers}
+                  label="Project Details"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 5: WORKBOOKS (ACCOUNTS, ADMIN, SUPERADMIN) */}
+        {/* 5. ACCOUNTS AND COMMERCIAL (SUPER_ADMIN, ADMIN, ACCOUNT - HIDDEN FOR SUPERVISOR) */}
         {/* ============================================================ */}
-        {canSeeWorkbooks && (
-          <ServiceNowModuleCategory
-            label="Spreadsheet Workbooks"
-            folderKey="workbooks"
-            isOpen={isSearching ? true : openFolder === "workbooks"}
-            onToggle={() => handleToggleFolder("workbooks")}
-            icon={FileSpreadsheet}
-            isShrunk={isShrunk}
-            isActiveParent={["attendance", "inventory-workbook"].includes(currentTab)}
-          >
-            {matchesSearch("Attendance Workbook") && (
-              <ServiceNowModuleItem
-                active={currentTab === "attendance"}
-                onClick={() => onSelectTab("attendance")}
-                icon={FileSpreadsheet}
-                label="Attendance Workbook"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Inventory Spreadsheet") && (
-              <ServiceNowModuleItem
-                active={currentTab === "inventory-workbook"}
-                onClick={() => onSelectTab("inventory-workbook")}
-                icon={FileSpreadsheet}
-                label="Inventory Spreadsheet"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
-        )}
+        {canSeeAccounts &&
+          categoryMatches("Accounts and Commercial", [
+            "Accounts & 3-Way Match",
+            "Atomic Stock Ledger",
+            "Inward Goods & Challans",
+          ]) && (
+            <ServiceNowModuleCategory
+              label="Accounts and Commercial"
+              folderKey="accounts"
+              isOpen={isSearching ? true : openFolder === "accounts"}
+              onToggle={() => handleToggleFolder("accounts")}
+              icon={Landmark}
+              isShrunk={isShrunk}
+              isActiveParent={isAccountsActive}
+            >
+              {matchesSearch("Accounts & 3-Way Match") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "accounts"}
+                  onClick={() => onSelectTab("accounts")}
+                  icon={DollarSign}
+                  label="Accounts & 3-Way Match"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Atomic Stock Ledger") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "ledger"}
+                  onClick={() => onSelectTab("ledger")}
+                  icon={BookOpen}
+                  label="Atomic Stock Ledger"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Inward Goods & Challans") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "supplies"}
+                  onClick={() => onSelectTab("supplies")}
+                  icon={Truck}
+                  label="Inward Goods & Challans"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
 
         {/* ============================================================ */}
-        {/* MODULE CATEGORY 6: ADMIN & SECURITY (ADMIN, SUPERADMIN) */}
+        {/* 6. PEOPLE AND HR (SUPER_ADMIN, ADMIN, ACCOUNT - HIDDEN FOR SUPERVISOR) */}
         {/* ============================================================ */}
-        {canSeeSecurity && (
-          <ServiceNowModuleCategory
-            label="System & Security"
-            folderKey="security"
-            isOpen={isSearching ? true : openFolder === "security"}
-            onToggle={() => handleToggleFolder("security")}
-            icon={ShieldCheck}
-            isShrunk={isShrunk}
-            isActiveParent={["users", "settings"].includes(currentTab)}
-          >
-            {matchesSearch("User Management") && (
-              <ServiceNowModuleItem
-                active={currentTab === "users"}
-                onClick={() => onSelectTab("users")}
-                icon={ShieldCheck}
-                label="User Management"
-                isShrunk={isShrunk}
-              />
-            )}
-            {matchesSearch("Plant Configuration") && (
-              <ServiceNowModuleItem
-                active={currentTab === "settings"}
-                onClick={() => onSelectTab("settings")}
-                icon={Settings}
-                label="Plant Configuration"
-                isShrunk={isShrunk}
-              />
-            )}
-          </ServiceNowModuleCategory>
-        )}
+        {canSeePeople &&
+          categoryMatches("People and HR", [
+            "Personnel Directory",
+            "Attendance Roster",
+          ]) && (
+            <ServiceNowModuleCategory
+              label="People and HR"
+              folderKey="people"
+              isOpen={isSearching ? true : openFolder === "people"}
+              onToggle={() => handleToggleFolder("people")}
+              icon={Users}
+              isShrunk={isShrunk}
+              isActiveParent={isPeopleActive}
+            >
+              {matchesSearch("Personnel Directory") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "employees"}
+                  onClick={() => onSelectTab("employees")}
+                  icon={Users}
+                  label="Personnel Directory"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Attendance Roster") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "attendance" && openFolder !== "workbooks"}
+                  onClick={() => onSelectTab("attendance")}
+                  icon={CalendarCheck}
+                  label="Attendance Roster"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
+
+        {/* ============================================================ */}
+        {/* 7. WORKBOOKS (SUPER_ADMIN, ADMIN, ACCOUNT - HIDDEN FOR SUPERVISOR) */}
+        {/* ============================================================ */}
+        {canSeeWorkbooks &&
+          categoryMatches("Workbooks", [
+            "Attendance Workbook",
+            "Inventory Spreadsheet",
+          ]) && (
+            <ServiceNowModuleCategory
+              label="Workbooks"
+              folderKey="workbooks"
+              isOpen={isSearching ? true : openFolder === "workbooks"}
+              onToggle={() => handleToggleFolder("workbooks")}
+              icon={FileSpreadsheet}
+              isShrunk={isShrunk}
+              isActiveParent={isWorkbooksActive}
+            >
+              {matchesSearch("Attendance Workbook") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "attendance" && openFolder === "workbooks"}
+                  onClick={() => onSelectTab("attendance")}
+                  icon={CalendarCheck}
+                  label="Attendance Workbook"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Inventory Spreadsheet") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "inventory-workbook" && openFolder === "workbooks"}
+                  onClick={() => onSelectTab("inventory-workbook")}
+                  icon={FileSpreadsheet}
+                  label="Inventory Spreadsheet"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
+
+        {/* ============================================================ */}
+        {/* 8. ADMIN AND SECURITY (SUPER_ADMIN, ADMIN - HIDDEN FOR ACCOUNT & SUPERVISOR) */}
+        {/* ============================================================ */}
+        {canSeeSecurity &&
+          categoryMatches("Admin and Security", [
+            "User Management",
+            "Plant Configuration",
+          ]) && (
+            <ServiceNowModuleCategory
+              label="Admin and Security"
+              folderKey="security"
+              isOpen={isSearching ? true : openFolder === "security"}
+              onToggle={() => handleToggleFolder("security")}
+              icon={ShieldCheck}
+              isShrunk={isShrunk}
+              isActiveParent={isSecurityActive}
+            >
+              {matchesSearch("User Management") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "users"}
+                  onClick={() => onSelectTab("users")}
+                  icon={ShieldCheck}
+                  label="User Management"
+                  isShrunk={isShrunk}
+                />
+              )}
+              {matchesSearch("Plant Configuration") && (
+                <ServiceNowModuleItem
+                  active={currentTab === "settings"}
+                  onClick={() => onSelectTab("settings")}
+                  icon={Settings}
+                  label="Plant Configuration"
+                  isShrunk={isShrunk}
+                />
+              )}
+            </ServiceNowModuleCategory>
+          )}
 
       </nav>
 
@@ -738,13 +764,16 @@ function ServiceNowModuleCategory({
       <button
         type="button"
         onClick={onToggle}
+        title={label}
         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
-          isOpen
+          isActiveParent
+            ? "font-semibold text-slate-900 bg-black/[0.06] shadow-2xs dark:text-white dark:bg-white/10"
+            : isOpen
             ? "font-semibold text-slate-900 bg-black/5 dark:text-white"
             : "text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium"
         }`}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <span
             className={`shrink-0 transition-transform duration-200 ${
               isOpen ? "rotate-90 text-slate-800" : "text-slate-400 group-hover:text-slate-600"
@@ -752,9 +781,21 @@ function ServiceNowModuleCategory({
           >
             <ChevronRight className="size-3.5 stroke-[2.2]" />
           </span>
-          <Icon className="size-4 shrink-0 text-slate-500 group-hover:text-slate-800 transition-colors" />
-          <span className="truncate text-[13px]">{label}</span>
+          <Icon
+            className={`size-4 shrink-0 transition-colors ${
+              isActiveParent
+                ? "text-[var(--role-accent)] opacity-100"
+                : "text-slate-500 group-hover:text-slate-800"
+            }`}
+          />
+          <span className="truncate text-[12.5px] leading-snug">{label}</span>
         </div>
+        {isActiveParent && (
+          <span
+            className="size-1.5 rounded-full shrink-0 ml-1.5"
+            style={{ backgroundColor: "var(--role-accent)" }}
+          />
+        )}
       </button>
 
       {/* Indented Module Items */}
