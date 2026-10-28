@@ -33,7 +33,9 @@ export class LogsService {
         .eq('id', userId)
         .maybeSingle();
       profile = data;
-    } catch {}
+    } catch (err) {
+      console.warn('[LogsService] Could not fetch profile for user:', userId, err);
+    }
 
     const newRecord: UserLogRecord = {
       id,
@@ -46,11 +48,12 @@ export class LogsService {
       user_email: profile?.email || '',
     };
 
-    // 1. Primary: Write to audit_logs (append-only unified store)
+    // Primary: Write to audit_logs (append-only unified store)
+    // Only set actor_id if profile exists to prevent foreign key violation on audit_logs_actor_id_fkey
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const { error } = await supabaseAdmin.from('audit_logs').insert({
         id,
-        actor_id: userId,
+        actor_id: profile ? userId : null,
         action: 'USER_LOG',
         status: 'SUCCESS',
         details: {
@@ -66,20 +69,13 @@ export class LogsService {
         },
         created_at: nowIso,
       });
-      memoryLogs.unshift(newRecord);
-      return newRecord;
-    } catch {}
 
-    // 2. Fallback: Write to user_logs if available
-    try {
-      await supabaseAdmin.from('user_logs').insert({
-        id,
-        created_by: userId,
-        event: input.event.trim(),
-        remarks: input.remarks?.trim() || null,
-        created_at: nowIso,
-      });
-    } catch {}
+      if (error) {
+        console.error('[LogsService] Failed to write user log to audit_logs:', error);
+      }
+    } catch (err) {
+      console.error('[LogsService] Exception writing to audit_logs:', err);
+    }
 
     memoryLogs.unshift(newRecord);
     return newRecord;
@@ -112,12 +108,19 @@ export class LogsService {
       if (query.to) {
         auditQuery = auditQuery.lte('created_at', query.to);
       }
+      if (query.search) {
+        const s = query.search.trim();
+        auditQuery = auditQuery.or(
+          `action.ilike.%${s}%,details->>event.ilike.%${s}%,details->>remarks.ilike.%${s}%,details->>description.ilike.%${s}%`
+        );
+      }
+
       auditQuery = auditQuery.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
       const { data: auditData, count: auditCount, error: auditErr } = await auditQuery;
 
-      if (!auditErr && auditData && auditData.length > 0) {
-        let logs: UserLogRecord[] = auditData.map((row: any) => {
+      if (!auditErr && auditData) {
+        const logs: UserLogRecord[] = auditData.map((row: any) => {
           const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
           const det = row.details || {};
           return {
@@ -132,11 +135,6 @@ export class LogsService {
           };
         });
 
-        if (query.search) {
-          const q = query.search.toLowerCase();
-          logs = logs.filter((l) => l.event.toLowerCase().includes(q) || (l.remarks || '').toLowerCase().includes(q));
-        }
-
         const total = auditCount ?? logs.length;
         return {
           logs,
@@ -146,57 +144,23 @@ export class LogsService {
           totalPages: Math.ceil(total / limit) || 1,
         };
       }
-    } catch {}
-
-    // 2. Query user_logs fallback
-    try {
-      let dbQuery = supabaseAdmin
-        .from('user_logs')
-        .select('id, created_by, created_at, event, remarks', { count: 'exact' })
-        .eq('created_by', userId)
-        .gte('created_at', effectiveFrom);
-
-      if (query.search) {
-        dbQuery = dbQuery.or(`event.ilike.%${query.search}%,remarks.ilike.%${query.search}%`);
+      if (auditErr) {
+        console.warn('[LogsService] audit_logs query error in getMyLogs:', auditErr);
       }
-      if (query.to) {
-        dbQuery = dbQuery.lte('created_at', query.to);
-      }
-      dbQuery = dbQuery.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    } catch (err) {
+      console.warn('[LogsService] Exception in getMyLogs:', err);
+    }
 
-      const { data, error, count } = await dbQuery;
-      if (!error && data) {
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('full_name, role, email')
-          .eq('id', userId)
-          .maybeSingle();
-
-        const formattedLogs: UserLogRecord[] = data.map((l) => ({
-          ...l,
-          user_name: profile?.full_name || 'User',
-          user_role: profile?.role || 'SUPERVISOR',
-          user_email: profile?.email || '',
-        }));
-
-        const total = count ?? formattedLogs.length;
-        return {
-          logs: formattedLogs,
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit) || 1,
-        };
-      }
-    } catch {}
-
-    // 3. Memory fallback (capped to 7 days)
+    // 2. Memory fallback (capped to 7 days)
     const sevenDaysCutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    let userMemory = memoryLogs
-      .filter((l) => l.created_by === userId && new Date(l.created_at).getTime() >= sevenDaysCutoffTime);
+    let userMemory = memoryLogs.filter(
+      (l) => l.created_by === userId && new Date(l.created_at).getTime() >= sevenDaysCutoffTime
+    );
     if (query.search) {
       const q = query.search.toLowerCase();
-      userMemory = userMemory.filter((l) => l.event.toLowerCase().includes(q) || (l.remarks || '').toLowerCase().includes(q));
+      userMemory = userMemory.filter(
+        (l) => l.event.toLowerCase().includes(q) || (l.remarks || '').toLowerCase().includes(q)
+      );
     }
     const total = userMemory.length;
     return {
@@ -233,12 +197,31 @@ export class LogsService {
       if (query.to) {
         auditQuery = auditQuery.lte('created_at', query.to);
       }
+
+      // Filter by role if provided
+      if (query.role) {
+        auditQuery = auditQuery.filter('profiles.role', 'eq', query.role);
+      }
+
+      // Filter by user name if provided
+      if (query.user) {
+        auditQuery = auditQuery.filter('profiles.full_name', 'ilike', `%${query.user}%`);
+      }
+
+      // Filter by search text if provided
+      if (query.search) {
+        const s = query.search.trim();
+        auditQuery = auditQuery.or(
+          `action.ilike.%${s}%,details->>event.ilike.%${s}%,details->>remarks.ilike.%${s}%,details->>description.ilike.%${s}%`
+        );
+      }
+
       auditQuery = auditQuery.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
       const { data: auditData, count: auditCount, error: auditErr } = await auditQuery;
 
-      if (!auditErr && auditData && auditData.length > 0) {
-        let logs: UserLogRecord[] = auditData.map((row: any) => {
+      if (!auditErr && auditData) {
+        const logs: UserLogRecord[] = auditData.map((row: any) => {
           const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
           const det = row.details || {};
           return {
@@ -253,19 +236,6 @@ export class LogsService {
           };
         });
 
-        if (query.search) {
-          const q = query.search.toLowerCase();
-          logs = logs.filter(
-            (l) =>
-              l.event.toLowerCase().includes(q) ||
-              (l.remarks || '').toLowerCase().includes(q) ||
-              (l.user_name || '').toLowerCase().includes(q)
-          );
-        }
-        if (query.role) {
-          logs = logs.filter((l) => l.user_role?.toUpperCase() === query.role?.toUpperCase());
-        }
-
         const total = auditCount ?? logs.length;
         return {
           logs,
@@ -275,71 +245,23 @@ export class LogsService {
           totalPages: Math.ceil(total / limit) || 1,
         };
       }
-    } catch {}
-
-    // 2. Query user_logs fallback
-    try {
-      let dbQuery = supabaseAdmin
-        .from('user_logs')
-        .select(
-          `
-          id,
-          created_by,
-          created_at,
-          event,
-          remarks,
-          profiles:created_by (
-            full_name,
-            role,
-            email
-          )
-        `,
-          { count: 'exact' }
-        )
-        .gte('created_at', effectiveFrom);
-
-      if (query.search) {
-        dbQuery = dbQuery.or(`event.ilike.%${query.search}%,remarks.ilike.%${query.search}%`);
+      if (auditErr) {
+        console.warn('[LogsService] audit_logs query error in getAllLogs:', auditErr);
       }
-      if (query.to) {
-        dbQuery = dbQuery.lte('created_at', query.to);
-      }
-      dbQuery = dbQuery.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    } catch (err) {
+      console.warn('[LogsService] Exception in getAllLogs:', err);
+    }
 
-      const { data, error, count } = await dbQuery;
-      if (!error && data) {
-        const formattedLogs: UserLogRecord[] = data.map((row: any) => {
-          const prof = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-          return {
-            id: row.id,
-            created_by: row.created_by,
-            created_at: row.created_at,
-            event: row.event,
-            remarks: row.remarks,
-            user_name: prof?.full_name || 'User',
-            user_role: prof?.role || 'SUPERVISOR',
-            user_email: prof?.email || '',
-          };
-        });
-
-        const total = count ?? formattedLogs.length;
-        return {
-          logs: formattedLogs,
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit) || 1,
-        };
-      }
-    } catch {}
-
-    // 3. Memory fallback (capped to 7 days)
+    // 2. Memory fallback (capped to 7 days)
     const sevenDaysCutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
     let allMemory = memoryLogs.filter((l) => new Date(l.created_at).getTime() >= sevenDaysCutoffTime);
     if (query.search) {
       const q = query.search.toLowerCase();
       allMemory = allMemory.filter(
-        (l) => l.event.toLowerCase().includes(q) || (l.remarks || '').toLowerCase().includes(q) || (l.user_name || '').toLowerCase().includes(q)
+        (l) =>
+          l.event.toLowerCase().includes(q) ||
+          (l.remarks || '').toLowerCase().includes(q) ||
+          (l.user_name || '').toLowerCase().includes(q)
       );
     }
     if (query.role) {

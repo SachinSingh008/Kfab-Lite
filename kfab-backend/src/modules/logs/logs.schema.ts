@@ -7,14 +7,21 @@ export const CreateUserLogSchema = z.object({
 
 export type CreateUserLogInput = z.infer<typeof CreateUserLogSchema>;
 
+const emptyToUndefined = (val: unknown) => (typeof val === 'string' && val.trim() === '' ? undefined : val);
+
 export const ListUserLogsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().max(100).optional(),
-  from: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
-  to: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'SUPERVISOR', 'ACCOUNT']).optional(),
-  user: z.string().trim().max(100).optional(),
+  search: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
+  from: z.preprocess(emptyToUndefined, z.string().optional()),
+  to: z.preprocess(emptyToUndefined, z.string().optional()),
+  role: z.preprocess((val) => {
+    if (!val || val === '' || val === 'ALL' || val === 'all') return undefined;
+    const str = String(val).toUpperCase();
+    if (str === 'ACCOUNTANT') return 'ACCOUNT';
+    return str;
+  }, z.enum(['SUPER_ADMIN', 'ADMIN', 'SUPERVISOR', 'ACCOUNT']).optional()),
+  user: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
 });
 
 export type ListUserLogsQuery = z.infer<typeof ListUserLogsQuerySchema>;
@@ -22,12 +29,12 @@ export type ListUserLogsQuery = z.infer<typeof ListUserLogsQuerySchema>;
 export const ListSystemLogsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().max(100).optional(),
-  module: z.string().trim().max(50).optional(),
-  action: z.string().trim().max(50).optional(),
-  user: z.string().trim().max(100).optional(),
-  from: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
-  to: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
+  search: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
+  module: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
+  action: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
+  user: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
+  from: z.preprocess(emptyToUndefined, z.string().optional()),
+  to: z.preprocess(emptyToUndefined, z.string().optional()),
 });
 
 export type ListSystemLogsQuery = z.infer<typeof ListSystemLogsQuerySchema>;
