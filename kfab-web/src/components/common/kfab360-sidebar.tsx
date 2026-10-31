@@ -3,6 +3,7 @@ import Image from "next/image";
 import {
   LayoutDashboard,
   CalendarCheck,
+  Calendar,
   Boxes,
   Truck,
   Users,
@@ -52,7 +53,20 @@ export type NavTab =
   | "reports-progress"
   | "reports-details"
   | "users"
-  | "settings";
+  | "settings"
+  | "workbooks"
+  | "workbooks-attendance"
+  | "workbooks-employees"
+  | "workbooks-expenses"
+  | "workbooks-inventory"
+  | "workbooks-outward"
+  | "workbooks-salary"
+  | "workbooks-salary-2025"
+  | "workbooks-salary-2026"
+  | "workbooks-salary-2027"
+  | "workbooks-salary-2028"
+  | "workbooks-sales"
+  | "workbooks-others";
 
 interface Kfab360SidebarProps {
   currentTab: NavTab;
@@ -83,6 +97,20 @@ function getFolderForTab(tab: NavTab, openFolder?: string | null): string | null
       return "people";
     case "attendance":
       return openFolder === "workbooks" ? "workbooks" : "people";
+    case "workbooks":
+    case "workbooks-attendance":
+    case "workbooks-employees":
+    case "workbooks-expenses":
+    case "workbooks-inventory":
+    case "workbooks-outward":
+    case "workbooks-salary":
+    case "workbooks-salary-2025":
+    case "workbooks-salary-2026":
+    case "workbooks-salary-2027":
+    case "workbooks-salary-2028":
+    case "workbooks-sales":
+    case "workbooks-others":
+      return "workbooks";
     case "users":
     case "settings":
       return "security";
@@ -136,6 +164,7 @@ export function Kfab360Sidebar({
     currentTab === "employees" ||
     (currentTab === "attendance" && openFolder !== "workbooks");
   const isWorkbooksActive =
+    currentTab.startsWith("workbooks") ||
     (currentTab === "inventory-workbook" && openFolder === "workbooks") ||
     (currentTab === "attendance" && openFolder === "workbooks");
   const isSecurityActive =
@@ -206,8 +235,7 @@ export function Kfab360Sidebar({
     } else if (["users", "settings"].includes(currentTab) && !canSeeSecurity) {
       onSelectTab("dashboard");
     } else if (
-      currentTab === "inventory-workbook" &&
-      !canSeeInventorySpreadsheets &&
+      (currentTab === "inventory-workbook" || currentTab.startsWith("workbooks")) &&
       !canSeeWorkbooks
     ) {
       onSelectTab("dashboard");
@@ -594,40 +622,18 @@ export function Kfab360Sidebar({
         {/* ============================================================ */}
         {/* 7. WORKBOOKS (SUPER_ADMIN, ADMIN, ACCOUNT - HIDDEN FOR SUPERVISOR) */}
         {/* ============================================================ */}
-        {canSeeWorkbooks &&
-          categoryMatches("Workbooks", [
-            "Attendance Workbook",
-            "Inventory Spreadsheet",
-          ]) && (
-            <ServiceNowModuleCategory
-              label="Workbooks"
-              folderKey="workbooks"
-              isOpen={isSearching ? true : openFolder === "workbooks"}
-              onToggle={() => handleToggleFolder("workbooks")}
-              icon={FileSpreadsheet}
-              isShrunk={isShrunk}
-              isActiveParent={isWorkbooksActive}
-            >
-              {matchesSearch("Attendance Workbook") && (
-                <ServiceNowModuleItem
-                  active={currentTab === "attendance" && openFolder === "workbooks"}
-                  onClick={() => onSelectTab("attendance")}
-                  icon={CalendarCheck}
-                  label="Attendance Workbook"
-                  isShrunk={isShrunk}
-                />
-              )}
-              {matchesSearch("Inventory Spreadsheet") && (
-                <ServiceNowModuleItem
-                  active={currentTab === "inventory-workbook" && openFolder === "workbooks"}
-                  onClick={() => onSelectTab("inventory-workbook")}
-                  icon={FileSpreadsheet}
-                  label="Inventory Spreadsheet"
-                  isShrunk={isShrunk}
-                />
-              )}
-            </ServiceNowModuleCategory>
-          )}
+        {canSeeWorkbooks && matchesSearch("Workbooks") && (
+          <ServiceNowRootItem
+            active={isWorkbooksActive || currentTab === "workbooks" || currentTab.startsWith("workbooks-")}
+            onClick={() => {
+              setOpenFolder(null);
+              onSelectTab("workbooks");
+            }}
+            icon={FileSpreadsheet}
+            label="Workbooks"
+            isShrunk={isShrunk}
+          />
+        )}
 
         {/* ============================================================ */}
         {/* 8. ADMIN AND SECURITY (SUPER_ADMIN, ADMIN - HIDDEN FOR ACCOUNT & SUPERVISOR) */}
@@ -767,7 +773,7 @@ function ServiceNowModuleCategory({
         title={label}
         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group ${
           isActiveParent
-            ? "font-semibold text-slate-900 bg-black/[0.06] shadow-2xs dark:text-white dark:bg-white/10"
+            ? "font-semibold bg-[var(--role-sidebar-item-active-bg)] text-[var(--role-sidebar-item-active-fg)] shadow-xs"
             : isOpen
             ? "font-semibold text-slate-900 bg-black/5 dark:text-white"
             : "text-slate-600 hover:text-slate-900 hover:bg-black/5 font-medium"
@@ -820,6 +826,7 @@ interface ServiceNowModuleItemProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   isShrunk?: boolean;
+  badge?: string;
 }
 
 function ServiceNowModuleItem({
@@ -828,6 +835,7 @@ function ServiceNowModuleItem({
   icon: Icon,
   label,
   isShrunk = false,
+  badge,
 }: ServiceNowModuleItemProps) {
   return (
     <button
@@ -849,6 +857,18 @@ function ServiceNowModuleItem({
         />
         {!isShrunk && <span className="truncate text-[12px]">{label}</span>}
       </div>
+
+      {!isShrunk && badge && (
+        <span
+          className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold shrink-0 ml-1.5 ${
+            active
+              ? "bg-white/20 text-white"
+              : "bg-slate-100 text-slate-500 border border-slate-200 group-hover:border-slate-300"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

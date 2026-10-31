@@ -14,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController(text: 'sachinasinghofficial@gmail.com');
-  final _passwordController = TextEditingController();
+  final _passwordController = TextEditingController(text: 'admin123');
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberDevice = true;
@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _selectedRole = roleKey;
       _usernameController.text = email;
-      _passwordController.clear();
+      _passwordController.text = 'admin123';
       _errorMessage = null;
     });
   }
@@ -100,9 +100,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (err) {
       if (mounted) {
+        String msg = err.toString().replaceAll('Exception: ', '');
+        if (msg.contains('SocketFailed') ||
+            msg.contains('Failed host lookup') ||
+            msg.contains('No address associated') ||
+            msg.contains('errno = 7')) {
+          msg = 'Unable to connect to Supabase server. Please check your internet connection or Wi-Fi and verify device network permissions.';
+        }
         setState(() {
           _isLoading = false;
-          _errorMessage = err.toString().replaceAll('Exception: ', '');
+          _errorMessage = msg;
         });
       }
     }

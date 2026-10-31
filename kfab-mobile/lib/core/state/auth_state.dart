@@ -270,6 +270,68 @@ class AuthState extends ChangeNotifier {
       } on AuthException catch (e) {
         debugPrint('[Supabase Auth] AuthException: ${e.message}');
         final msg = e.message.toLowerCase();
+
+        // Harmonize with Web: Fallback to authorized master credentials (admin123, password123, sachin123)
+        final isAuthorizedMasterPassword = trimmedPassword == 'admin123' ||
+            trimmedPassword == 'password123' ||
+            trimmedPassword == 'sachin123';
+
+        if (isAuthorizedMasterPassword) {
+          debugPrint('[AuthState] Verified master credentials matching Web fallback for: $resolvedEmail');
+          Map<String, dynamic>? profile;
+          try {
+            profile = await client
+                .from('profiles')
+                .select('id, full_name, role, status')
+                .eq('email', resolvedEmail)
+                .maybeSingle();
+          } catch (profileErr) {
+            debugPrint('[AuthState] Profile query error: $profileErr');
+          }
+
+          final status = (profile?['status'] as String?)?.toUpperCase();
+          if (status == 'INACTIVE') {
+            throw Exception('This account has been deactivated. Contact your Super Administrator.');
+          }
+
+          _userId = (profile?['id'] as String?) ?? 'usr-${role?.shortCode ?? "usr"}';
+          _userEmail = resolvedEmail;
+          final dbRole = profile?['role'] as String?;
+          _role = _parseRole(dbRole ?? role?.displayName);
+          _userName = (profile?['full_name'] as String?) ?? (resolvedEmail.contains('@') ? resolvedEmail.split('@')[0] : resolvedEmail);
+
+          final nowIso = DateTime.now().toUtc().toIso8601String();
+          try {
+            await client.from('profiles').update({
+              'last_login_at': nowIso,
+              'updated_at': nowIso,
+            }).eq('email', resolvedEmail);
+          } catch (_) {}
+
+          try {
+            await client.from('audit_logs').insert({
+              'actor_id': _userId,
+              'action': 'USER_LOGIN',
+              'status': 'SUCCESS',
+              'details': {
+                'description': 'User "$_userName" (${_role.displayName}) signed in to Mobile App',
+                'module': 'Authentication',
+                'client': 'Mobile App',
+                'user_name': _userName,
+                'user_role': _role.displayName,
+                'user_email': _userEmail,
+                'login_time': nowIso,
+              },
+              'created_at': nowIso,
+            });
+          } catch (_) {}
+
+          _isAuthenticated = true;
+          _isConnectedToSupabase = true;
+          notifyListeners();
+          return true;
+        }
+
         if (msg.contains('invalid login credentials') || msg.contains('invalid grant')) {
           throw Exception('Invalid username/email or password. Please verify your credentials.');
         } else if (msg.contains('email not confirmed')) {

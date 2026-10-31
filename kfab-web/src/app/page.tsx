@@ -32,6 +32,7 @@ import { SettingsView } from "@/components/views/settings-view";
 import { ChatView } from "@/components/views/chat-view";
 import { LogsView } from "@/components/views/logs-view";
 import { InventoryView } from "@/components/views/inventory-view";
+import { ExcelWorkbooksView } from "@/components/views/excel-workbooks-view";
 
 // Supervisor Operations Views (from Kfab360)
 import { DailyReportsView } from "@/components/views/daily-reports-view";
@@ -77,6 +78,71 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
     title: "Inventory & Material Management Master",
     subtitle: "Shop floor consumables, tackles, machinery, power tools, clothes, safety gear, and complete cost telemetry.",
     category: "Store & Inventory",
+  },
+    workbooks: {
+    title: "Microsoft Excel Database Workbooks Studio",
+    subtitle: "Enterprise spreadsheet studio with all 39 manufacturing workbooks, live formula editing, and Excel export.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-attendance": {
+    title: "Attendance & Muster Workbooks (2025 - 2027)",
+    subtitle: "Year-wise daily worker muster, shift records, and monthly attendance sheets.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-employees": {
+    title: "Employee Master Details Workbook",
+    subtitle: "Personnel profiles, skill categories, KYC data, and statutory records.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-expenses": {
+    title: "Plant Unit Operational Expenses Workbooks",
+    subtitle: "Site utilities, consumables, contractor payments, and operational expenditure by plant unit.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-inventory": {
+    title: "Raw Material & Equipment Inventory Workbooks",
+    subtitle: "Unit-wise plates, structural sections, consumables, and tackle registers.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-outward": {
+    title: "Outward Goods & Dispatch Register",
+    subtitle: "Dispatched structural consignments, trailer loads, and delivery challans.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-salary": {
+    title: "Salary & Advance Registers (All Years)",
+    subtitle: "Monthly payroll, worker advances, overtime, and unit-wise disbursement ledgers across all plant units.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-salary-2025": {
+    title: "Salary & Advance Register • Year 2025 (5 Workbooks)",
+    subtitle: "Chattisgarh, Hubli, KFPL, KIPL, and Lonand 2025 payroll and advance registers.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-salary-2026": {
+    title: "Salary & Advance Register • Year 2026 (5 Workbooks)",
+    subtitle: "Chattisgarh, Hubli, KFPL, KIPL, and Lonand 2026 payroll and advance registers.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-salary-2027": {
+    title: "Salary & Advance Register • Year 2027 (5 Workbooks)",
+    subtitle: "Chattisgarh, Hubli, KFPL, KIPL, and Lonand 2027 payroll and advance registers.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-salary-2028": {
+    title: "Salary & Advance Register • Year 2028 (5 Workbooks)",
+    subtitle: "Chattisgarh, Hubli, KFPL, KIPL, and Lonand 2028 payroll and advance registers.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-sales": {
+    title: "Plant Sales & Commercial Invoices Workbooks",
+    subtitle: "Client billing, fabrication invoices, tonnage dispatches, and receivables.",
+    category: "Workbooks & Database",
+  },
+  "workbooks-others": {
+    title: "Stakeholders, Clients & Consumers Directories",
+    subtitle: "Client master, consumer profiles, vendor/creditor ledgers, and contact details.",
+    category: "Workbooks & Database",
   },
   "inventory-workbook": {
     title: "Inventory Live Spreadsheet Workspace",
@@ -171,7 +237,8 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
 };
 
 export default function KfabBasicApp() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [showSplash, setShowSplash] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [currentTab, setCurrentTab] = useState<NavTab>("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
@@ -268,7 +335,16 @@ export default function KfabBasicApp() {
 
   // Initial splash screen animation (5 seconds progressive video)
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return (
+      <SplashScreen
+        onComplete={() => {
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("kfab_splash_seen", "true");
+          }
+          setShowSplash(false);
+        }}
+      />
+    );
   }
 
   // If not authenticated, render Login Screen as the main screen
@@ -298,7 +374,20 @@ export default function KfabBasicApp() {
     chat: "Team Channels & Chat",
     inventory: "Inventory Master",
     stock: "Raw Material Stock",
-    "inventory-workbook": "Inventory Spreadsheet",
+        "inventory-workbook": "Inventory Spreadsheet",
+    workbooks: "Excel Database Studio",
+    "workbooks-attendance": "Attendance Workbooks",
+    "workbooks-employees": "Employee Master Workbook",
+    "workbooks-expenses": "Plant Expenses Workbooks",
+    "workbooks-inventory": "Plant Inventory Workbooks",
+    "workbooks-outward": "Outward Dispatch Register",
+    "workbooks-salary": "Salary & Advance Registers",
+    "workbooks-salary-2025": "Salary & Advance (2025)",
+    "workbooks-salary-2026": "Salary & Advance (2026)",
+    "workbooks-salary-2027": "Salary & Advance (2027)",
+    "workbooks-salary-2028": "Salary & Advance (2028)",
+    "workbooks-sales": "Plant Sales Workbooks",
+    "workbooks-others": "Stakeholders & Clients",
     "daily-reports": "Daily Shift Reports (DPR)",
     production: "Fabrication Bay Production",
     machines: "Plant Machinery",
@@ -458,7 +547,7 @@ export default function KfabBasicApp() {
         </header>
 
         {/* Dynamic View Content Area */}
-        <main className={`flex-1 ${currentTab === "chat" ? "overflow-hidden p-0" : "overflow-y-auto p-6 bg-[#F8FAFC]"}`}>
+        <main className={`flex-1 ${currentTab === "chat" || currentTab.startsWith("workbooks") ? "overflow-hidden p-3" : "overflow-y-auto p-6 bg-[#F8FAFC]"}`}>
           {currentTab === "dashboard" && (
             <DashboardView
               currentUser={currentUser}
@@ -519,6 +608,40 @@ export default function KfabBasicApp() {
 
           {currentTab === "inventory" && (
             <InventoryView currentUser={currentUser} initialOpenExcel={false} sampleDataActive={sampleDataActive} />
+          )}
+
+          {currentTab.startsWith("workbooks") && (
+            <div className="h-[calc(100vh-130px)] w-full">
+              <ExcelWorkbooksView
+                initialWorkbookId={
+                  currentTab === "workbooks-attendance"
+                    ? "Attendence_Attendance_2025_xlsx"
+                    : currentTab === "workbooks-employees"
+                    ? "Employee_Details_Employee_xlsx"
+                    : currentTab === "workbooks-expenses"
+                    ? "Expenses_KFPL_xlsx"
+                    : currentTab === "workbooks-inventory"
+                    ? "Inventory_KFPL_xlsx"
+                    : currentTab === "workbooks-outward"
+                    ? "Outward_Register_Outward_Register_xlsx"
+                    : currentTab === "workbooks-salary-2025"
+                    ? "Salary_and_Advance_2025_KFPL_Salary_and_Advance_xlsx"
+                    : currentTab === "workbooks-salary-2026"
+                    ? "Salary_and_Advance_2026_KFPL_Salary_and_Advance_xlsx"
+                    : currentTab === "workbooks-salary-2027"
+                    ? "Salary_and_Advance_2027_KFPL_Salary_and_Advance_xlsx"
+                    : currentTab === "workbooks-salary-2028"
+                    ? "Salary_and_Advance_2028_KFPL_Salary_and_Advance_xlsx"
+                    : currentTab === "workbooks-salary"
+                    ? "Salary_and_Advance_2025_KFPL_Salary_and_Advance_xlsx"
+                    : currentTab === "workbooks-sales"
+                    ? "Sales_KFPL_xlsx"
+                    : currentTab === "workbooks-others"
+                    ? "others_Clients_xlsx"
+                    : undefined
+                }
+              />
+            </div>
           )}
 
           {currentTab === "inventory-workbook" && (

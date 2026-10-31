@@ -43,9 +43,12 @@ class SupabaseConfig {
     try {
       await c.from('profiles').select('id').limit(1);
       return true;
-    } catch (_) {
-      // Connected even if table query is constrained by RLS
+    } on PostgrestException {
+      // Postgrest exception means server was successfully reached and responded
       return true;
+    } catch (_) {
+      // Network socket, DNS failure, or lack of internet permission
+      return false;
     }
   }
 }
