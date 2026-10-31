@@ -125,7 +125,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { fullName, email, password, role, status } = body;
+    const { fullName, email, role, status } = body;
+    // Accept either 'password' or 'initialPassword' from the client
+    const password = body.password || body.initialPassword;
 
     if (!email || !password || !fullName || !role) {
       return NextResponse.json(
@@ -192,9 +194,21 @@ export async function POST(request: NextRequest) {
       statusCode: 201,
       message: 'User created successfully in Supabase.',
       user: {
-        ...profilePayload,
+        id: userId,
+        fullName,
+        email,
         username: email,
+        role,
+        status: status || 'ACTIVE',
+        department: null,
+        designation: null,
+        employeeId: null,
+        forcePasswordReset: false,
         isSuperAdmin: role === 'SUPER_ADMIN',
+        lastLoginAt: null,
+        sessionRevokedAt: null,
+        createdAt: profilePayload.created_at,
+        updatedAt: profilePayload.updated_at,
       },
     }, { status: 201 });
   } catch (err: unknown) {

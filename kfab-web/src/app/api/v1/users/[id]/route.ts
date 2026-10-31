@@ -165,7 +165,23 @@ export async function PUT(
     return NextResponse.json({
       statusCode: 200,
       message: 'User updated successfully.',
-      user: updated || { id, ...updates },
+      user: {
+        id,
+        fullName: updated?.full_name || fullName || null,
+        email: updated?.email || email || null,
+        username: updated?.email || email || null,
+        role: updated?.role || role || null,
+        status: updated?.status || status || 'ACTIVE',
+        department: null,
+        designation: null,
+        employeeId: null,
+        forcePasswordReset: updated?.force_password_reset ?? false,
+        isSuperAdmin: (updated?.role || role) === 'SUPER_ADMIN',
+        lastLoginAt: updated?.last_login_at || null,
+        sessionRevokedAt: updated?.session_revoked_at || null,
+        createdAt: updated?.created_at || null,
+        updatedAt: updated?.updated_at || new Date().toISOString(),
+      },
     });
   } catch (err: unknown) {
     console.error('[PUT /api/v1/users/:id] Uncaught error:', err);
@@ -220,9 +236,10 @@ export async function DELETE(
         targetProfile?.role === 'ACCOUNTANT' ||
         targetProfile?.role === 'ACCOUNT';
 
-      if (!isSupervisorOrAcc || (callerId && callerId === id)) {
+      const isSelf = callerId && callerId === id;
+      if (!isSupervisorOrAcc || isSelf) {
         return NextResponse.json(
-          { statusCode: 403, message: 'Permission denied: Admins can only delete supervisors and accountants.' },
+          { statusCode: 403, message: 'Permission denied: Admins can only delete supervisors and accountants (not themselves or higher roles).' },
           { status: 403 }
         );
       }
