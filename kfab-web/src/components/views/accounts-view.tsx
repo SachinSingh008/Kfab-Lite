@@ -125,6 +125,14 @@ export function AccountsView({ currentUser, records: propRecords }: AccountsView
         </div>
 
         <div className="flex items-center gap-2.5">
+          <a
+            href="/invoicing"
+            className="flex items-center gap-2 px-4 py-2 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            <FileCheck2 className="size-4 text-[#38BDF8]" />
+            <span>Open GST Invoicing & Ledgers</span>
+            <ArrowRight className="size-3.5" />
+          </a>
           <button
             onClick={handleExportAccountsExcel}
             className="flex items-center gap-2 px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"

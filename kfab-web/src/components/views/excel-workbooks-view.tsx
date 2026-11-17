@@ -1531,9 +1531,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
 
   return (
     <div
-      className={`flex flex-col w-full bg-[#F3F4F6] text-[#1E293B] select-none font-sans overflow-hidden border border-[#D1D5DB] shadow-sm rounded-lg ${
-        isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen" : "h-full"
-      }`}
+      className={`flex flex-col w-full bg-[#F3F4F6] text-[#1E293B] select-none font-sans overflow-hidden border border-[#D1D5DB] shadow-sm rounded-lg ${isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen" : "h-full"
+        }`}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       onClick={() => {
@@ -1589,9 +1588,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
             <button
               onClick={() => setAutosaveEnabled(!autosaveEnabled)}
               title="Toggle automatic saving to database on every edit"
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                autosaveEnabled ? "bg-white text-[#107C41]" : "text-emerald-200 hover:text-white"
-              }`}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${autosaveEnabled ? "bg-white text-[#107C41]" : "text-emerald-200 hover:text-white"
+                }`}
             >
               Autosave {autosaveEnabled ? "ON" : "OFF"}
             </button>
@@ -1643,11 +1641,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
             <button
               key={tab}
               onClick={() => setActiveRibbonTab(tab)}
-              className={`px-3 py-1 font-semibold transition-colors ${
-                activeRibbonTab === tab
+              className={`px-3 py-1 font-semibold transition-colors ${activeRibbonTab === tab
                   ? "bg-white text-[#107C41] border-t-2 border-[#107C41] shadow-xs"
                   : "text-[#4B5563] hover:text-[#111827] hover:bg-gray-200/60"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -1720,9 +1717,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                     setShowNotification("Format Painter active: click any cell to apply formatting");
                     setTimeout(() => setShowNotification(null), 3000);
                   }}
-                  className={`p-1 rounded transition-colors ${
-                    formatPainterStyle ? "bg-amber-100 text-amber-800" : "hover:bg-gray-100 text-gray-700"
-                  }`}
+                  className={`p-1 rounded transition-colors ${formatPainterStyle ? "bg-amber-100 text-amber-800" : "hover:bg-gray-100 text-gray-700"
+                    }`}
                   title="Format Painter"
                 >
                   <Paintbrush className="size-3.5" />
@@ -1746,33 +1742,30 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                 </select>
                 <button
                   onClick={() => toggleCellStyle("bold")}
-                  className={`p-1 rounded ${
-                    cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.bold
+                  className={`p-1 rounded ${cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.bold
                       ? "bg-emerald-100 text-[#107C41] font-bold"
                       : "hover:bg-gray-100"
-                  }`}
+                    }`}
                   title="Bold (Ctrl+B)"
                 >
                   <Bold className="size-3.5" />
                 </button>
                 <button
                   onClick={() => toggleCellStyle("italic")}
-                  className={`p-1 rounded ${
-                    cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.italic
+                  className={`p-1 rounded ${cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.italic
                       ? "bg-emerald-100 text-[#107C41]"
                       : "hover:bg-gray-100"
-                  }`}
+                    }`}
                   title="Italic (Ctrl+I)"
                 >
                   <Italic className="size-3.5" />
                 </button>
                 <button
                   onClick={() => toggleCellStyle("underline")}
-                  className={`p-1 rounded ${
-                    cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.underline
+                  className={`p-1 rounded ${cellStyles[`${selectedCell.r}_${selectedCell.c}`]?.underline
                       ? "bg-emerald-100 text-[#107C41]"
                       : "hover:bg-gray-100"
-                  }`}
+                    }`}
                   title="Underline (Ctrl+U)"
                 >
                   <Underline className="size-3.5" />
@@ -1827,11 +1820,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
               <div className="relative flex items-center border-r border-[#E5E7EB] pr-3" ref={mergeDropdownRef}>
                 <button
                   onClick={() => handleMergeCells(true)}
-                  className={`px-2 py-0.5 rounded font-semibold text-[11px] flex items-center gap-1.5 transition-colors ${
-                    isSelectionMerged
+                  className={`px-2 py-0.5 rounded font-semibold text-[11px] flex items-center gap-1.5 transition-colors ${isSelectionMerged
                       ? "bg-emerald-100 text-[#065F46] hover:bg-emerald-200 border border-emerald-300 shadow-xs"
                       : "bg-gray-100 hover:bg-gray-200 text-[#1F2937]"
-                  }`}
+                    }`}
                   title={isSelectionMerged ? "Click to toggle/unmerge cells" : "Merge & Center selection"}
                 >
                   <TableCellsMerge className="size-3.5 text-[#107C41]" />
@@ -1839,9 +1831,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                 </button>
                 <button
                   onClick={() => setShowMergeDropdown((prev) => !prev)}
-                  className={`p-1 rounded-r border-l border-gray-300 hover:bg-gray-200 text-gray-600 transition-colors ${
-                    showMergeDropdown ? "bg-gray-200 text-black" : ""
-                  }`}
+                  className={`p-1 rounded-r border-l border-gray-300 hover:bg-gray-200 text-gray-600 transition-colors ${showMergeDropdown ? "bg-gray-200 text-black" : ""
+                    }`}
                   title="More merge options"
                 >
                   <ChevronDown className="size-3" />
@@ -1891,11 +1882,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                     <button
                       onClick={handleUnmergeCells}
                       disabled={!isSelectionMerged}
-                      className={`w-full text-left px-3 py-2 flex items-start gap-2.5 transition-colors ${
-                        isSelectionMerged
+                      className={`w-full text-left px-3 py-2 flex items-start gap-2.5 transition-colors ${isSelectionMerged
                           ? "hover:bg-amber-50 hover:text-amber-800 text-amber-700"
                           : "opacity-40 cursor-not-allowed text-gray-400"
-                      }`}
+                        }`}
                     >
                       <TableCellsSplit className="size-4 text-amber-600 mt-0.5 shrink-0" />
                       <div>
@@ -1987,9 +1977,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
               <div className="h-4 w-px bg-gray-300 mx-1" />
               <button
                 onClick={() => handleMergeCells(true)}
-                className={`px-2 py-1 hover:bg-gray-200 rounded font-semibold flex items-center gap-1 ${
-                  isSelectionMerged ? "bg-emerald-100 text-[#065F46]" : "bg-gray-100 text-gray-700"
-                }`}
+                className={`px-2 py-1 hover:bg-gray-200 rounded font-semibold flex items-center gap-1 ${isSelectionMerged ? "bg-emerald-100 text-[#065F46]" : "bg-gray-100 text-gray-700"
+                  }`}
                 title="Merge & Center Selection"
               >
                 <TableCellsMerge className="size-3.5 text-[#107C41]" />
@@ -2234,9 +2223,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Navigator (Collapsible) */}
         <div
-          className={`bg-white border-r border-[#D1D5DB] flex flex-col shrink-0 transition-all duration-200 ${
-            isSidebarCollapsed ? "w-10" : "w-64"
-          }`}
+          className={`bg-white border-r border-[#D1D5DB] flex flex-col shrink-0 transition-all duration-200 ${isSidebarCollapsed ? "w-10" : "w-64"
+            }`}
         >
           <div className="p-2 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F8FAFC]">
             {!isSidebarCollapsed && (
@@ -2279,11 +2267,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                       <button
                         key={wb.id}
                         onClick={() => setSelectedWorkbook(wb)}
-                        className={`w-full text-left px-2 py-1.5 rounded flex items-center gap-1.5 transition-colors ${
-                          selectedWorkbook.id === wb.id
+                        className={`w-full text-left px-2 py-1.5 rounded flex items-center gap-1.5 transition-colors ${selectedWorkbook.id === wb.id
                             ? "bg-[#107C41] text-white font-bold"
                             : "text-[#334155] hover:bg-gray-100"
-                        }`}
+                          }`}
                       >
                         <FileSpreadsheet className="size-3.5 shrink-0" />
                         <span className="truncate">{wb.fileName}</span>
@@ -2306,12 +2293,11 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                               return next;
                             })
                           }
-                          className={`w-full flex items-center justify-between px-2 py-1 rounded font-semibold text-xs transition-colors ${
-                            rootNode.files.some(wb => wb.id === selectedWorkbook.id) ||
-                            Object.values(rootNode.subfolders).some(sub => sub.files.some(wb => wb.id === selectedWorkbook.id))
+                          className={`w-full flex items-center justify-between px-2 py-1 rounded font-semibold text-xs transition-colors ${rootNode.files.some(wb => wb.id === selectedWorkbook.id) ||
+                              Object.values(rootNode.subfolders).some(sub => sub.files.some(wb => wb.id === selectedWorkbook.id))
                               ? "bg-[#E8F5EF] text-[#107C41] border border-[#107C41]/30"
                               : "text-[#334155] hover:bg-gray-100"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-1.5 truncate">
                             {isRootOpen ? (
@@ -2324,9 +2310,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                           <div className="flex items-center gap-1 text-[10px] text-gray-400">
                             <span>{rootNode.totalCount}</span>
                             <ChevronDown
-                              className={`size-3 transition-transform ${
-                                isRootOpen ? "" : "-rotate-90"
-                              }`}
+                              className={`size-3 transition-transform ${isRootOpen ? "" : "-rotate-90"
+                                }`}
                             />
                           </div>
                         </button>
@@ -2337,11 +2322,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                               <button
                                 key={wb.id}
                                 onClick={() => setSelectedWorkbook(wb)}
-                                className={`w-full text-left px-2 py-1 rounded flex items-center gap-1.5 transition-colors ${
-                                  selectedWorkbook.id === wb.id
+                                className={`w-full text-left px-2 py-1 rounded flex items-center gap-1.5 transition-colors ${selectedWorkbook.id === wb.id
                                     ? "bg-[#107C41] text-white font-bold shadow-xs"
                                     : "text-[#475569] hover:bg-gray-100"
-                                }`}
+                                  }`}
                               >
                                 <FileSpreadsheet className="size-3 shrink-0" />
                                 <span className="truncate">{wb.fileName}</span>
@@ -2365,11 +2349,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                         return next;
                                       })
                                     }
-                                    className={`w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${
-                                      subNode.files.some(wb => wb.id === selectedWorkbook.id)
+                                    className={`w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors ${subNode.files.some(wb => wb.id === selectedWorkbook.id)
                                         ? "bg-[#FEF9EC] text-amber-700 border border-amber-400/40 font-semibold"
                                         : "text-[#475569] hover:bg-gray-100 font-medium"
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center gap-1.5 truncate">
                                       <Calendar className="size-3 text-amber-600 shrink-0" />
@@ -2378,9 +2361,8 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                     <div className="flex items-center gap-1 text-[10px] text-gray-400">
                                       <span>{subNode.totalCount}</span>
                                       <ChevronDown
-                                        className={`size-3 transition-transform ${
-                                          isSubOpen ? "" : "-rotate-90"
-                                        }`}
+                                        className={`size-3 transition-transform ${isSubOpen ? "" : "-rotate-90"
+                                          }`}
                                       />
                                     </div>
                                   </button>
@@ -2391,11 +2373,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                         <button
                                           key={wb.id}
                                           onClick={() => setSelectedWorkbook(wb)}
-                                          className={`w-full text-left px-2 py-1 rounded flex items-center gap-1.5 transition-colors ${
-                                            selectedWorkbook.id === wb.id
+                                          className={`w-full text-left px-2 py-1 rounded flex items-center gap-1.5 transition-colors ${selectedWorkbook.id === wb.id
                                               ? "bg-[#107C41] text-white font-bold shadow-xs"
                                               : "text-[#475569] hover:bg-gray-100"
-                                          }`}
+                                            }`}
                                         >
                                           <FileSpreadsheet className="size-3 shrink-0" />
                                           <span className="truncate">
@@ -2498,11 +2479,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                 endC: colIdx,
                               });
                             }}
-                            className={`h-6 px-2 text-center text-[11px] font-semibold select-none border-b border-r border-[#D1D5DB] relative transition-colors cursor-pointer ${
-                              isColSelected
+                            className={`h-6 px-2 text-center text-[11px] font-semibold select-none border-b border-r border-[#D1D5DB] relative transition-colors cursor-pointer ${isColSelected
                                 ? "bg-[#D1FAE5] text-[#065F46] font-bold border-b-2 border-b-[#107C41]"
                                 : "bg-[#F3F4F6] text-[#4B5563] hover:bg-gray-200/80"
-                            }`}
+                              }`}
                           >
                             <span>{letter}</span>
                             {/* Column Resize Divider Handle */}
@@ -2535,15 +2515,14 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                       <tr
                         key={rowIdx}
                         style={{ height: `${h}px` }}
-                        className={`${
-                          isTotalRow
+                        className={`${isTotalRow
                             ? "bg-[#1E3A8A] text-white font-bold"
                             : isTitleRow
-                            ? "bg-[#F0FDF4] font-bold text-[#166534]"
-                            : rowIdx % 2 === 1
-                            ? "bg-[#FAFAFA]"
-                            : "bg-white"
-                        }`}
+                              ? "bg-[#F0FDF4] font-bold text-[#166534]"
+                              : rowIdx % 2 === 1
+                                ? "bg-[#FAFAFA]"
+                                : "bg-white"
+                          }`}
                       >
                         {/* Row Number Header with Resize Divider */}
                         {showHeadings && (
@@ -2557,11 +2536,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                 endC: maxCols - 1,
                               });
                             }}
-                            className={`w-12 min-w-[48px] max-w-[48px] text-center text-[10px] select-none border-b border-r border-[#D1D5DB] sticky left-0 z-10 relative cursor-pointer ${
-                              isRowSelected
+                            className={`w-12 min-w-[48px] max-w-[48px] text-center text-[10px] select-none border-b border-r border-[#D1D5DB] sticky left-0 z-10 relative cursor-pointer ${isRowSelected
                                 ? "bg-[#D1FAE5] text-[#065F46] font-bold border-r-2 border-r-[#107C41]"
                                 : "bg-[#F3F4F6] text-[#6B7280] hover:bg-gray-200"
-                            }`}
+                              }`}
                           >
                             <span>{rowIdx + 1}</span>
                             {/* Row Resize Divider Handle */}
@@ -2719,24 +2697,20 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                                 textDecoration: customStyle.underline
                                   ? "underline"
                                   : customStyle.strike
-                                  ? "line-through"
-                                  : undefined,
+                                    ? "line-through"
+                                    : undefined,
                                 color: customStyle.color,
                                 backgroundColor: customStyle.bgColor,
                               }}
-                              className={`h-7 px-2 text-[12px] align-middle truncate relative transition-shadow ${
-                                showGridlines ? "border-b border-r border-[#E5E7EB]" : ""
-                              } ${
-                                inRange
+                              className={`h-7 px-2 text-[12px] align-middle truncate relative transition-shadow ${showGridlines ? "border-b border-r border-[#E5E7EB]" : ""
+                                } ${inRange
                                   ? "bg-emerald-50/60 outline-1 outline-[#107C41] outline-offset-[-1px] z-10"
                                   : ""
-                              } ${
-                                isFocused
+                                } ${isFocused
                                   ? "border-2 border-[#107C41] z-20 shadow-xs"
                                   : ""
-                              } ${
-                                isCalculated && !isTotalRow && !isTitleRow ? "bg-emerald-50/40 text-[#065F46]" : ""
-                              } ${isSearchMatch ? "bg-amber-200 text-amber-900 font-bold" : ""}`}
+                                } ${isCalculated && !isTotalRow && !isTitleRow ? "bg-emerald-50/40 text-[#065F46]" : ""
+                                } ${isSearchMatch ? "bg-amber-200 text-amber-900 font-bold" : ""}`}
                             >
                               {isEditing ? (
                                 <input
@@ -2803,11 +2777,10 @@ export function ExcelWorkbooksView({ initialWorkbookId }: ExcelWorkbooksViewProp
                       setShowSheetRenameModal(true);
                     }}
                     title="Click to switch sheet • Right-click to rename"
-                    className={`px-3 py-1 font-semibold rounded-t transition-colors shrink-0 ${
-                      isActive
+                    className={`px-3 py-1 font-semibold rounded-t transition-colors shrink-0 ${isActive
                         ? "bg-white text-[#107C41] border-b-2 border-b-[#107C41] font-bold shadow-xs"
                         : "text-[#4B5563] hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     {name}
                   </button>

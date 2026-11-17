@@ -9,6 +9,22 @@ const nextConfig: NextConfig = {
         destination: `${process.env.BACKEND_API_URL}/api/v1/:path*`,
       });
     }
+    if (process.env.INVOICING_BACKEND_URL) {
+      fallbackList.push({
+        source: '/invoicing-api/:path*',
+        destination: `${process.env.INVOICING_BACKEND_URL}/api/:path*`,
+      });
+    }
+    if (process.env.INVOICING_FRONTEND_URL) {
+      fallbackList.push({
+        source: '/invoicing',
+        destination: `${process.env.INVOICING_FRONTEND_URL}`,
+      });
+      fallbackList.push({
+        source: '/invoicing/:path*',
+        destination: `${process.env.INVOICING_FRONTEND_URL}/:path*`,
+      });
+    }
     return {
       beforeFiles: [],
       afterFiles: [
