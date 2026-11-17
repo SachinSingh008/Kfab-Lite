@@ -1,0 +1,186 @@
+import { Eye, Pencil, RotateCcw, Trash2, FileMinus, Copy } from 'lucide-react';
+import type { Invoice } from '../types/api';
+import formatCurrency, { plural } from '../utils/formatting';
+import { formatInvoiceDateLabel } from '../utils/invoiceDueDate.ts';
+import OverdueBadge from './OverdueBadge';
+import { canRecordPayment } from '../utils/invoicePayment';
+
+interface InvoicesCompactCardProps {
+  invoice: Invoice;
+  currencyCode: string;
+  onPreview: (invoice: Invoice) => void;
+  onEdit?: (invoice: Invoice) => void;
+  onCancel?: (invoice: Invoice) => void;
+  onRestore?: (invoice: Invoice) => void;
+  onCreditNote?: (invoice: Invoice) => void;
+  onDuplicate?: (invoice: Invoice) => void;
+  onRecordPayment?: (invoice: Invoice) => void;
+}
+
+  export default function InvoicesCompactCard({ invoice, currencyCode, onPreview, onEdit, onCancel, onRestore, onCreditNote, onDuplicate, onRecordPayment }: InvoicesCompactCardProps) {
+  const isCredit = invoice.voucher_type === 'purchase';
+  const isCancelled = invoice.status === 'cancelled';
+
+  return (
+      <article className={`invoice-compact-card invoice-compact-card--${invoice.voucher_type} ${isCancelled ? 'invoice-compact-card--cancelled' : ''}`}>
+        <div className="invoice-compact-card__grid">
+        {/* Main Info */}
+          <div className="invoice-compact-card__main">
+            <div className="invoice-compact-card__head">
+            <div>
+                <h3 className="invoice-compact-card__ledger">
+                {invoice.ledger?.name || 'Unknown Ledger'}
+              </h3>
+                <p className="invoice-compact-card__meta">
+                Invoice #{invoice.invoice_number}
+              </p>
+              {invoice.supplier_invoice_number && (
+                  <p className="invoice-compact-card__meta">
+                  Ref: {invoice.supplier_invoice_number}
+                </p>
+              )}
+            </div>
+              <div className="invoice-compact-card__badges">
+              <OverdueBadge invoice={invoice} />
+              {isCancelled && (
+                  <span className="invoice-compact-card__cancelled-badge">
+                  Cancelled
+                </span>
+              )}
+                <span className={`invoice-type-badge invoice-type-badge--${invoice.voucher_type}`}>
+                {isCredit ? 'Purchase' : 'Sales'}
+              </span>
+            </div>
+          </div>
+
+          {/* Address and Date */}
+            <div className="invoice-compact-card__details">
+            {invoice.ledger?.address && (
+                <p className="invoice-compact-card__address">{invoice.ledger.address}</p>
+            )}
+            {invoice.ledger?.phone_number && (
+                <p className="invoice-compact-card__meta">{invoice.ledger.phone_number}</p>
+            )}
+              <p className="invoice-compact-card__meta">
+              Invoice date: {formatInvoiceDateLabel(invoice.invoice_date)}
+            </p>
+            {invoice.due_date ? (
+              <p className="invoice-compact-card__meta">
+                Due date: {formatInvoiceDateLabel(invoice.due_date)}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Items Summary */}
+          <div className="invoice-compact-card__items">
+            <div>
+              <div className="invoice-compact-card__items-count">{plural(invoice.items.length, 'item')}</div>
+              <div className="invoice-compact-card__items-list">
+              {invoice.items.map((item, idx) => (
+                  <div key={idx} className="invoice-compact-card__item">
+                  {item.product_name || `Product #${item.product_id}`} x{item.quantity}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Amount and Actions */}
+          <div className="invoice-compact-card__side">
+            <div>
+              <div className="invoice-compact-card__meta">
+              {isCredit ? 'Credit (Purchase)' : 'Debit (Sales)'}
+            </div>
+              <div className={`invoice-compact-card__amount invoice-compact-card__amount--${invoice.voucher_type}`}>
+              {formatCurrency(invoice.total_amount, invoice.company_currency_code || currencyCode)}
+            </div>
+            {invoice.total_tax_amount > 0 && (
+                <div className="invoice-compact-card__meta">
+                Tax: {formatCurrency(invoice.total_tax_amount, invoice.company_currency_code || currencyCode)}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+            <div className="invoice-compact-card__actions">
+            {onRecordPayment && canRecordPayment(invoice) ? (
+              <button
+                type="button"
+                className="button button--secondary button--small"
+                onClick={() => onRecordPayment(invoice)}
+                aria-label={`Record payment for invoice ${invoice.invoice_number || `#${invoice.id}`}`}
+              >
+                Record payment
+              </button>
+            ) : null}
+            <button
+                type="button"
+              onClick={() => onPreview(invoice)}
+                className="button button--ghost button--icon"
+              title="Preview"
+              aria-label={`Preview invoice ${invoice.invoice_number}`}
+            >
+              <Eye size={16} aria-hidden="true" />
+            </button>
+            {!isCancelled && (
+              <>
+                <button
+                    type="button"
+                    className="button button--ghost button--icon"
+                  title="Create credit note (reduce this invoice, for a return or correction)"
+                  aria-label={`Create credit note for invoice ${invoice.invoice_number}`}
+                  onClick={() => onCreditNote?.(invoice)}
+                >
+                  <FileMinus size={16} aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    className="button button--ghost button--icon"
+                  title="Edit"
+              aria-label={`Edit invoice ${invoice.invoice_number}`}
+                  onClick={() => onEdit?.(invoice)}
+                >
+                  <Pencil size={16} aria-hidden="true" />
+                </button>
+              </>
+            )}
+            {isCancelled && (
+              <button
+                  type="button"
+                  className="button button--ghost button--icon"
+                title="Restore"
+              aria-label={`Restore invoice ${invoice.invoice_number}`}
+                onClick={() => onRestore?.(invoice)}
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+              </button>
+            )}
+            {!isCancelled && (
+              <>
+                <button
+                    type="button"
+                    className="button button--ghost button--icon"
+                  title="Duplicate invoice"
+                  aria-label={`Duplicate invoice ${invoice.invoice_number}`}
+                  onClick={() => onDuplicate?.(invoice)}
+                >
+                  <Copy size={16} aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    className="button button--ghost button--icon"
+                  title="Cancel"
+              aria-label={`Cancel invoice ${invoice.invoice_number}`}
+                  onClick={() => onCancel?.(invoice)}
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      </article>
+  );
+}

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: kfab-invoicing-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false # Set manually in Render dashboard to your Supabase connection string
+      - key: SECRET_KEY
+        generateValue: true # Render automatically generates a cryptographically secure random key
+      - key: CORS_ORIGINS
+        value: https://kfab-web.vercel.app,http://localhost:3000
+      - key: AUTO_BACKUP_ENABLED
+        value: "false"
+      - key: MCP_ENABLED
+        value: "false"
+

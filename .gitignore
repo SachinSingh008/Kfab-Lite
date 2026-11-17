@@ -4,6 +4,8 @@
 .env.*.local
 .env.*
 !.env.example
+!.env.development.example
+!.env.production.example
 
 # Node / Web dependencies & builds
 node_modules/
@@ -11,6 +13,28 @@ node_modules/
 out/
 build/
 dist/
+
+# Python dependencies & caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database & Storage
+postgres_data/
+*.sqlite
+*.sqlite3
+backups/
+
+# Testing & Reports
+playwright-report/
+test-results/
 
 # Flutter / Dart dependencies & builds
 .dart_tool/
