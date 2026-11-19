@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # 1. Local PostgreSQL Database (Self-hosted, Zero Cloud / Supabase Dependency)
+  db:
+    image: postgres:16-alpine
+    container_name: kfab_postgres_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-simple_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simple_password}
+      POSTGRES_DB: ${POSTGRES_DB:-simple_invoicing}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simple_user} -d ${POSTGRES_DB:-simple_invoicing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 2. Invoicing Backend (FastAPI + SQLAlchemy)
+  invoicing-backend:
+    build:
+      context: ./invoicing/backend
+      dockerfile: Dockerfile
+    container_name: kfab_invoicing_backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-simple_user}:${POSTGRES_PASSWORD:-simple_password}@db:5432/${POSTGRES_DB:-simple_invoicing}
+      SECRET_KEY: dev-secret-key-change-in-production-minimum-32-chars
+      SMTP_ENCRYPTION_KEY: "dev-smtp-encryption-key-32bytes!"
+      ENVIRONMENT: development
+      DEBUG: "true"
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+    command: >
+      sh -c "python seed_admin.py &&
+             python migrate.py up &&
+             uvicorn app_main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # 3. Invoicing Frontend (Embedded Portal)
+  invoicing-frontend:
+    build:
+      context: ./invoicing/frontend
+      dockerfile: Dockerfile
+    container_name: kfab_invoicing_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - invoicing-backend
+    restart: unless-stopped
+
+  # 4. KFAB360 ERP Web Application
+  kfab-web:
+    build:
+      context: ./kfab-web
+      dockerfile: Dockerfile
+    container_name: kfab360_erp_web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - INVOICING_BACKEND_URL=http://invoicing-backend:8000
+      - INVOICING_FRONTEND_URL=http://localhost:5173
+    depends_on:
+      - invoicing-frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

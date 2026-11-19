@@ -205,8 +205,8 @@ const TAB_TITLES: Record<NavTab, { title: string; subtitle: string; category: st
     category: "Gate Entry",
   },
   accounts: {
-    title: "Accounts & Commercial 3-Way Reconciliation",
-    subtitle: "Commercial ledger, 3-way matching (PO, Challan, Invoice), and payment audit.",
+    title: "Accounts",
+    subtitle: "Live GST Invoices, Customer & Supplier Ledgers, Quotations, and E-Way Bills.",
     category: "Commercial",
   },
   employees: {
@@ -398,7 +398,7 @@ export default function KfabBasicApp() {
     attendance: "Attendance Roster",
     ledger: "Atomic Stock Ledger",
     supplies: "Inward Goods & Challans",
-    accounts: "Accounts & 3-Way Match",
+    accounts: "Accounts",
     employees: "Personnel Directory",
     reports: "Project Progress",
     "reports-progress": "Project Progress",

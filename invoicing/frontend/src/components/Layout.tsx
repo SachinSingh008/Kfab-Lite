@@ -90,35 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="sidebar-toggle__bar" />
             <span className="sidebar-toggle__bar" />
           </button>
-          <button
-            type="button"
-            className="page-header__shortcut-hint"
-            onClick={() => setCheatSheetOpen(true)}
-          >
-            Press <kbd>?</kbd> for shortcuts
-          </button>
-          <GitHubStarButton className="page-header__github" />
-          <a
-            className="button button--ghost button--small page-header__help"
-            href={GUIDE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open the user guide"
-            title="Open the user guide"
-          >
-            <CircleHelp size={16} aria-hidden="true" />
-            <span className="page-header__help-label">Help</span>
-          </a>
-          <button
-            type="button"
-            className="button button--ghost button--small page-header__feedback"
-            onClick={() => setFeedbackOpen(true)}
-            aria-label="Request a feature or report a bug"
-            title="Request a feature or report a bug"
-          >
-            <MessageSquarePlus size={16} aria-hidden="true" />
-            <span className="page-header__feedback-label">Request a feature or report a bug</span>
-          </button>
+          <div style={{ flex: 1 }} />
           <ThemeToggle />
         </header>
 

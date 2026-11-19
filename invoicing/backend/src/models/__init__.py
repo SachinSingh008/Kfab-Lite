@@ -29,6 +29,9 @@ from src.models.oauth import (
     OAuthClient,
     OAuthToken,
 )
+from src.models.financial_year import FinancialYear
+from src.models.invoice_series import InvoiceSeries
+from src.models.credit_note import CreditNote, CreditNoteInvoiceRef, CreditNoteItem
 from src.models.marketplace import (
     MarketplaceConnection,
     MarketplaceLedgerLink,

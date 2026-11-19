@@ -1,0 +1,14 @@
+{
+  "name": "kfab-suite",
+  "version": "1.0.0",
+  "description": "KFAB360 ERP & Simple Invoicing Unified Suite",
+  "scripts": {
+    "dev": "concurrently -k -n \"ERP-WEB,INV-FRONT,INV-BACK\" -c \"cyan.bold,green.bold,yellow.bold\" \"npm run dev --prefix kfab-web\" \"npm run dev --prefix invoicing/frontend\" \"npm run dev:backend\"",
+    "dev:backend": "cd invoicing/backend && .venv\\Scripts\\python.exe -m uvicorn app_main:app --host 0.0.0.0 --port 8000 --reload",
+    "build": "npm run build --prefix kfab-web && npm run build --prefix invoicing/frontend",
+    "migrate:invoicing": "cd invoicing/backend && .venv\\Scripts\\python.exe migrate.py"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -26,16 +26,15 @@ function mediaQuery(): MediaQueryList | null {
 }
 
 function systemPrefersDark(): boolean {
-  // No matchMedia: stay on the app's original dark look.
-  return mediaQuery()?.matches ?? true;
+  return false;
 }
 
 function readPreference(): ThemePreference {
   try {
     const stored = localStorage.getItem(THEME_KEY);
-    return isThemePreference(stored) ? stored : 'system';
+    return isThemePreference(stored) ? stored : 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 

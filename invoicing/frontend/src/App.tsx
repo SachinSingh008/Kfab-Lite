@@ -71,11 +71,17 @@ const MarketplaceBrowsePage = lazy(() => import('./pages/marketplace/Marketplace
  * redirect — see utils/nextPath.ts.
  */
 function Protected({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
+  const { isAuthenticated, isAutoLoggingIn } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to={loginPathWithNext(`${location.pathname}${location.search}`)} replace />;
+  if (isAutoLoggingIn || !isAuthenticated) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f172a', color: '#ffffff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'inline-block', width: '32px', height: '32px', borderRadius: '50%', border: '4px solid #38bdf8', borderRightColor: 'transparent', animation: 'spin 1s linear infinite' }}></div>
+          <p style={{ marginTop: '12px', fontSize: '14px', fontWeight: 600, color: '#cbd5e1' }}>Opening KFab Invoicing...</p>
+        </div>
+      </div>
+    );
   }
 
   return children;
@@ -211,14 +217,7 @@ function LegacyRedirect({ to }: { to: string }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicOnly>
-            <LoginPage />
-          </PublicOnly>
-        }
-      />
+      <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       {/* Outside PublicOnly: these carry a one-time link or code, and a browser that
           still holds some session, even an expired one, must not be redirected away

@@ -14,25 +14,28 @@ type AuthContextType = {
   /** Runs the deployment itself: SMTP, backups. See require_platform_admin. */
   canManagePlatform: boolean;
   isAuthenticated: boolean;
+  isAutoLoggingIn: boolean;
   setSession: (tokens: AuthToken) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  autoLogin: () => Promise<boolean>;
   logout: () => void;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { token, hydrateUserRole, setUserRole } = useAuthStore(useShallow((s) => ({
+  const { token, hydrateUserRole, setUserRole, autoLogin } = useAuthStore(useShallow((s) => ({
     token: s.token,
     hydrateUserRole: s.hydrateUserRole,
     setUserRole: s.setUserRole,
+    autoLogin: s.autoLogin,
   })));
 
   useEffect(() => {
     if (!token) {
-      setUserRole(null);
-      return;
+      void autoLogin();
+    } else {
+      void hydrateUserRole();
     }
-    void hydrateUserRole();
-  }, [token, hydrateUserRole, setUserRole]);
+  }, [token, hydrateUserRole, setUserRole, autoLogin]);
 
   return <>{children}</>;
 }
@@ -44,8 +47,10 @@ export function useAuth() {
     userRole: s.userRole,
     companyRole: s.companyRole,
     canManagePlatform: s.canManagePlatform,
+    isAutoLoggingIn: s.isAutoLoggingIn,
     setSession: s.setSession,
     login: s.login,
+    autoLogin: s.autoLogin,
     logout: s.logout,
   })));
 

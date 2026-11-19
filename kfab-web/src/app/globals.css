@@ -39,13 +39,13 @@
 /* 1. Super Admin: Sleek Platinum Gray, White & Obsidian Black (B/W Monochrome) */
 :root,
 [data-role-theme="SUPER_ADMIN"] {
-  --role-primary: #09090b;
-  --role-primary-hover: #18181b;
-  --role-accent: #27272a;
-  --role-accent-hover: #09090b;
-  --role-badge-bg: #18181b;
-  --role-badge-text: #ffffff;
-  --role-border: #e4e4e7;
+  --role-primary: #18181b;
+  --role-primary-hover: #27272a;
+  --role-accent: #3f3f46;
+  --role-accent-hover: #18181b;
+  --role-badge-bg: #e4e4e7;
+  --role-badge-text: #18181b;
+  --role-border: #d4d4d8;
   --role-subtle: #f4f4f5;
   --role-header-border: #e4e4e7;
   --role-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
@@ -55,6 +55,7 @@
 
   /* Sidebar: Modern Neutral Off-White / Zinc Gray (Image 1 inspired) */
   --role-sidebar-bg: #f8f9fa;
+  --role-sidebar-gradient-start: #e2e8f0;
   --role-sidebar-fg: #09090b;
   --role-sidebar-border: #e4e4e7;
   --role-sidebar-subtle: #ffffff;
@@ -62,9 +63,9 @@
   --role-sidebar-item-fg: #3f3f46;
   --role-sidebar-item-hover-bg: #f4f4f5;
   --role-sidebar-item-hover-fg: #09090b;
-  --role-sidebar-item-active-bg: #09090b;
-  --role-sidebar-item-active-fg: #ffffff;
-  --role-sidebar-item-active-accent: #ffffff;
+  --role-sidebar-item-active-bg: #e4e4e7;
+  --role-sidebar-item-active-fg: #18181b;
+  --role-sidebar-item-active-accent: #3f3f46;
 
   /* Navbar: Clean Monochrome */
   --role-navbar-bg: #ffffff;
@@ -102,6 +103,7 @@
 
   /* Sidebar: Clean light surface with blue highlights */
   --role-sidebar-bg: #f8fafc;
+  --role-sidebar-gradient-start: #dbeafe;
   --role-sidebar-fg: #0f172a;
   --role-sidebar-border: #e2e8f0;
   --role-sidebar-subtle: #eff6ff;
@@ -149,6 +151,7 @@
 
   /* Sidebar: Light Red Theme */
   --role-sidebar-bg: #fff5f5;
+  --role-sidebar-gradient-start: #fee2e2;
   --role-sidebar-fg: #1e293b;
   --role-sidebar-border: #fecaca;
   --role-sidebar-subtle: #fee2e2;
@@ -197,6 +200,7 @@
 
   /* Sidebar: Light Fresh Lime Tinted Surface (Image 3) */
   --role-sidebar-bg: #f7fcf2;
+  --role-sidebar-gradient-start: #dcfce7;
   --role-sidebar-fg: #14532d;
   --role-sidebar-border: #dcfce7;
   --role-sidebar-subtle: #edfae0;
